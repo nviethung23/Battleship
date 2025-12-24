@@ -1,3 +1,126 @@
+# 🚢 Battleship Multiplayer Online Game
+
+Game Hải Chiến trực tuyến 2 người chơi, real-time với WebSocket, WebRTC, MongoDB, Node.js, Express, JWT, bảo mật cao, UI đẹp, hỗ trợ voice/video call.
+
+---
+## 🎯 Tính năng nổi bật
+
+- Đăng ký/Đăng nhập với JWT Authentication
+- Chơi Battleship 2 người real-time (Quick Play, Private Room)
+- Chat real-time trong trận đấu
+
+## 🚀 Cài đặt nhanh
+
+### 1. Yêu cầu
+- Node.js v18+
+- MongoDB Atlas account (free tier)
+
+### 2. Clone & cài đặt
+```bash
+git clone https://github.com/nviethung23/Battleship
+cd battleship
+npm install
+```
+
+### 3. Cấu hình môi trường
+Tạo file `.env`:
+```env
+PORT=3000
+NODE_ENV=development
+JWT_SECRET=your-super-secret-jwt-key
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/battleship?retryWrites=true&w=majority
+```
+
+### 4. Tạo tài khoản admin (tùy chọn)
+```bash
+npm run create-admin
+# Tạo user admin/admin123 (nên đổi pass sau khi đăng nhập)
+```
+
+### 5. Chạy server
+```bash
+# Production
+npm start
+# Development (auto-restart)
+npm run dev
+```
+
+### 6. Truy cập
+| URL | Mô tả |
+|-----|-------|
+| http://localhost:3000 | Game chính |
+| http://localhost:3000/admin | Admin Panel |
+
+## 🛠️ Công nghệ sử dụng
+
+- **Backend**: Node.js 18+, Express.js, Socket.IO 4.x
+- **Frontend**: HTML5, CSS3, Vanilla JS
+- **Database**: MongoDB Atlas (Mongoose)
+- **Real-time**: Socket.IO (WebSocket)
+- **Video Call**: WebRTC (native)
+- **Authentication**: JWT
+- **Security**: Helmet, Rate Limiting, Input Validation, bcrypt
+
+## 📁 Cấu trúc thư mục
+```
+battleship/
+├── client/      # Frontend (HTML, CSS, JS, images)
+├── server/      # Backend (Express, Socket.IO, models, controllers)
+├── .env         # Environment variables
+├── package.json
+└── README.md
+```
+
+## 🎮 Hướng dẫn chơi
+
+1. Đăng ký tài khoản hoặc chơi Guest
+2. Đăng nhập, vào Hub chọn Quick Play hoặc tạo/join phòng
+3. Đặt tàu (kéo thả, xoay, random)
+4. Sẵn sàng, chờ đối thủ, bắt đầu chơi
+5. Bắn theo lượt (trúng bắn tiếp, trượt chuyển lượt)
+6. Chat, gọi video, xem kết quả, quay lại Hub
+
+**Luật chơi:**
+- Carrier: 5 ô | Battleship: 4 ô | Cruiser: 3 ô | Submarine: 3 ô | Destroyer: 2 ô
+- Bắn trúng → bắn tiếp, bắn trượt → chuyển lượt, phá hết tàu đối thủ → thắng
+
+**Phím tắt:**
+- `R`: Xoay tàu | `Enter`: Gửi chat
+
+## 👨‍💼 Admin Panel
+- Truy cập `/admin` sau khi đăng nhập với tài khoản admin
+- Quản lý users, games, thống kê, promote/demote admin
+
+---
+
+## 🐛 Troubleshooting
+
+- **MongoDB Connection Error**: Kiểm tra MONGODB_URI trong .env, whitelist IP trên Atlas
+- **Port Already in Use**: Đổi PORT trong .env hoặc kill process đang dùng port 3000
+- **Socket Connection Failed**: Đảm bảo server đang chạy, kiểm tra token, check browser console
+- **Admin Panel Access Denied**: Đảm bảo user có role: 'admin', đăng nhập lại
+
+---
+
+## 📖 Tài liệu kỹ thuật
+| File | Mô tả |
+|------|-------|
+| [SYSTEM_FLOW_ACCURATE.md](SYSTEM_FLOW_ACCURATE.md) | Data Flow Diagram - Socket Events |
+| [ACTIVITY_FLOW_DIAGRAM.md](ACTIVITY_FLOW_DIAGRAM.md) | Activity Diagrams - User Flow |
+| [DATABASE_SCHEMA_ERD.md](DATABASE_SCHEMA_ERD.md) | ERD - Database Schema |
+
+---
+
+## 🤝 Đóng góp
+1. Fork repo
+2. Tạo branch mới (`git checkout -b feature/ten-tinh-nang`)
+3. Commit & push (`git commit -m 'Add feature'`)
+4. Mở Pull Request
+
+---
+
+## 📄 License
+ISC License - xem [LICENSE](LICENSE) để biết chi tiết.
 # 🚢 BATTLESHIP - Multiplayer Online Game# 🚢 Battleship Multiplayer Game
 
 
