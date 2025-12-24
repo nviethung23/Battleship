@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battleship - Lobby</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css?v=2.3">
+    <link rel="stylesheet" href="css/lobby.css?v=2.3">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Lobby Waiting Screen -->
+        <div id="lobbyScreen" class="screen">
+            <!-- Image Background -->
+            <div class="image-background lobby-bg"></div>
+            
+            <!-- Top Bar: Room Code + Leave Button -->
+            <div class="lobby-topbar">
+                <div class="room-code-display">
+                    <span class="room-code-label">ROOM</span>
+                    <span id="lobbyRoomCode" class="room-code-value">------</span>
+                </div>
+                <button id="btnLeaveRoom" class="btn-leave-room">
+                    <span class="leave-icon">🚪</span>
+                    <span class="leave-text">Rời Phòng</span>
+                </button>
+            </div>
+            
+            <!-- Main Lobby Layout -->
+            <div class="lobby-main-wrapper">
+                <!-- Timer ở giữa phía trên -->
+                <div class="lobby-timer-center">
+                    <div class="timer-circle-large">
+                        <span id="lobbyTimer" class="timer-value-large">60</span>
+                        <span class="timer-label-large">s</span>
+                    </div>
+                </div>
+
+                <!-- Player Cards Container -->
+                <div class="lobby-players-container">
+                    <!-- Ships Display for Player 1 (LEFT outside) -->
+                    <div class="ships-display-container ships-left">
+                        <div class="ship-frame">
+                            <img id="lobbyShip1_carrier" src="images/characters/character1/ships/carrier.png" alt="Carrier" class="ship-icon">
+                            <div class="ship-name">Carrier</div>
+                        </div>
+                        <div class="ship-frame">
+                            <img id="lobbyShip1_battleship" src="images/characters/character1/ships/battleship.png" alt="Battleship" class="ship-icon">
+                            <div class="ship-name">Battleship</div>
+                        </div>
+                        <div class="ship-frame">
+                            <img id="lobbyShip1_cruiser" src="images/characters/character1/ships/cruiser.png" alt="Cruiser" class="ship-icon">
+                            <div class="ship-name">Cruiser</div>
+                        </div>
+                        <div class="ship-frame">
+                            <img id="lobbyShip1_submarine" src="images/characters/character1/ships/submarine.png" alt="Submarine" class="ship-icon">
+                            <div class="ship-name">Submarine</div>
+                        </div>
+                        <div class="ship-frame">
+                            <img id="lobbyShip1_destroyer" src="images/characters/character1/ships/destroyer.png" alt="Destroyer" class="ship-icon">
+                            <div class="ship-name">Destroyer</div>
+                        </div>
+                    </div>
+
+                    <!-- Player 1 Card (You) -->
+                    <div class="player-card">
+                        <div class="player-badge badge-you">YOU</div>
+                        <div class="player-portrait-wrapper">
+                            <img id="lobbyCharacter1" src="images/characters/character1/avatar-large.png" alt="You" class="player-portrait">
+                        </div>
+                        <div class="player-info-box">
+                            <div id="lobbyPlayer1Name" class="player-name-text">Player 1</div>
+                            <div id="lobbyPlayer1Status" class="player-status-text status-waiting">Đang chờ...</div>
+                        </div>
+                    </div>
+
+                    <!-- VS Badge -->
+                    <div class="vs-badge-center">VS</div>
+
+                    <!-- Player 2 Card (Opponent) -->
+                    <div class="player-card">
+                        <div class="player-badge badge-opponent">OPPONENT</div>
+                        <div class="player-portrait-wrapper">
+                            <img id="lobbyCharacter2" src="images/logo.png" alt="Opponent" class="player-portrait portrait-waiting">
+                        </div>
+                        <div class="player-info-box">
+                            <div id="lobbyPlayer2Name" class="player-name-text">Đang chờ...</div>
+                            <div id="lobbyPlayer2Status" class="player-status-text status-empty">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Ships Display for Player 2 (RIGHT outside) -->
+                    <div class="ships-display-container ships-right">
+                        <div class="ship-frame">
+                            <img id="lobbyShip2_carrier" src="images/characters/character1/ships/carrier.png" alt="Carrier" class="ship-icon">
+                            <div class="ship-name">Carrier</div>
+                        </div>
+                        <div class="ship-frame">
+                            <img id="lobbyShip2_battleship" src="images/characters/character1/ships/battleship.png" alt="Battleship" class="ship-icon">
+                            <div class="ship-name">Battleship</div>
+                        </div>
+                        <div class="ship-frame">
+                            <img id="lobbyShip2_cruiser" src="images/characters/character1/ships/cruiser.png" alt="Cruiser" class="ship-icon">
+                            <div class="ship-name">Cruiser</div>
+                        </div>
+                        <div class="ship-frame">
+                            <img id="lobbyShip2_submarine" src="images/characters/character1/ships/submarine.png" alt="Submarine" class="ship-icon">
+                            <div class="ship-name">Submarine</div>
+                        </div>
+                        <div class="ship-frame">
+                            <img id="lobbyShip2_destroyer" src="images/characters/character1/ships/destroyer.png" alt="Destroyer" class="ship-icon">
+                            <div class="ship-name">Destroyer</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Character Selector Bottom (cosmetic preview) -->
+                <div class="lobby-character-selector-bar">
+                    <div class="selector-label-text">Chọn nhân vật (chỉ hiển thị):</div>
+                    <div class="selector-thumbs-row">
+                        <button class="selector-thumb selector-thumb-active" data-char-index="0">
+                            <img src="images/characters/character1/avatar-thumb.png" alt="Character 1">
+                        </button>
+                        <button class="selector-thumb" data-char-index="1">
+                            <img src="images/characters/character2/avatar-thumb.png" alt="Character 2">
+                        </button>
+                        <button class="selector-thumb" data-char-index="2">
+                            <img src="images/characters/character3/avatar-thumb.png" alt="Character 3">
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ready Button -->
+                <div class="lobby-ready-container">
+                    <button id="btnReady" class="btn-ready-lobby">
+                        <span class="ready-icon">⚓</span>
+                        <span class="ready-text">READY!</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/shared/state.js"></script>
+    <script src="js/shared/socket-shared.js"></script>
+    <script src="js/lobby.js"></script>
+</body>
+</html>

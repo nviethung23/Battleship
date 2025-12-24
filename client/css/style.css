@@ -1,0 +1,1306 @@
+/* ========================================
+   BATTLESHIP GAME - PREMIUM AUTH UI
+   Theme: Modern Naval Warfare with Clean Typography
+   ======================================== */
+
+/* Global Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Body - Background with Naval Theme */
+body {
+    font-family: 'Be Vietnam Pro', 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: url('../images/backgrounds/index.png') center/cover no-repeat fixed;
+    min-height: 100vh;
+    position: relative;
+    color: #1d3557;
+}
+
+/* Overlay for better contrast */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(10, 25, 47, 0.85) 0%, rgba(29, 53, 87, 0.75) 50%, rgba(69, 123, 157, 0.65) 100%);
+    z-index: -1;
+}
+
+/* Container - Không ép chiều cao */
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+}
+
+/* Auth Box - Glass Effect - FIT CONTENT */
+.auth-box {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 4px 16px rgba(69, 123, 157, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    max-width: 440px;
+    width: 100%;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.auth-box:hover {
+    box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.35),
+        0 6px 20px rgba(69, 123, 157, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transform: translateY(-2px);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Auth Header - Naval Theme - LOGO HERO */
+.auth-header {
+    text-align: center;
+    padding: 44px 24px 28px;
+    background: linear-gradient(135deg, rgba(10, 25, 47, 0.95) 0%, rgba(29, 53, 87, 0.9) 50%, rgba(69, 123, 157, 0.85) 100%);
+    color: white;
+    position: relative;
+    overflow: visible;
+}
+
+.auth-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 50px,
+        rgba(255, 255, 255, 0.03) 50px,
+        rgba(255, 255, 255, 0.03) 51px
+    );
+    z-index: 0;
+}
+
+/* Logo HERO - Phóng to hơn */
+.auth-header .logo-container {
+    text-align: center;
+    margin-bottom: 24px;
+    animation: logoHeroEntrance 1.2s ease-out;
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+}
+
+.auth-header .game-logo {
+    width: 140px;
+    height: auto;
+    filter: 
+        drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5))
+        drop-shadow(0 3px 10px rgba(0, 0, 0, 0.3))
+        drop-shadow(0 0 40px rgba(69, 123, 157, 0.6))
+        drop-shadow(0 0 80px rgba(69, 123, 157, 0.3));
+    animation: logoHeroGlow 4s ease-in-out infinite;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-header .game-logo:hover {
+    transform: scale(1.15) translateY(-6px);
+    filter: 
+        drop-shadow(0 10px 30px rgba(0, 0, 0, 0.6))
+        drop-shadow(0 5px 15px rgba(0, 0, 0, 0.4))
+        drop-shadow(0 0 50px rgba(69, 123, 157, 0.8))
+        drop-shadow(0 0 100px rgba(69, 123, 157, 0.4));
+}
+
+@keyframes logoHeroGlow {
+    0%, 100% { 
+        filter: 
+            drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5))
+            drop-shadow(0 3px 10px rgba(0, 0, 0, 0.3))
+            drop-shadow(0 0 40px rgba(69, 123, 157, 0.6))
+            drop-shadow(0 0 80px rgba(69, 123, 157, 0.3));
+    }
+    50% { 
+        filter: 
+            drop-shadow(0 10px 28px rgba(0, 0, 0, 0.55))
+            drop-shadow(0 5px 14px rgba(0, 0, 0, 0.35))
+            drop-shadow(0 0 60px rgba(69, 123, 157, 0.8))
+            drop-shadow(0 0 120px rgba(69, 123, 157, 0.4));
+    }
+}
+
+@keyframes logoHeroEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(-40px) scale(0.7);
+    }
+    60% {
+        transform: translateY(5px) scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Title "BATTLESHIP GAME" - Font Bungee (Gaming Bold) */
+.auth-header h1 {
+    font-family: 'Bungee', 'Black Ops One', 'Impact', cursive, sans-serif;
+    font-size: 36px;
+    font-weight: 400;
+    margin: 0;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 
+        0 3px 10px rgba(0, 0, 0, 0.5),
+        0 5px 20px rgba(0, 0, 0, 0.3),
+        0 0 40px rgba(69, 123, 157, 0.4);
+    position: relative;
+    z-index: 1;
+    color: #ffffff;
+    line-height: 1.3;
+}
+
+/* Subtitle - Be Vietnam Pro cho tiếng Việt */
+.subtitle {
+    font-family: 'Be Vietnam Pro', 'Inter', 'Roboto', sans-serif;
+    font-size: 13.5px;
+    margin-top: 12px;
+    opacity: 0.94;
+    letter-spacing: 0.3px;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    color: rgba(255, 255, 255, 0.96);
+}
+
+/* ========================================
+   TAB NAVIGATION - PREMIUM SEGMENTED CONTROL
+   ======================================== */
+
+.auth-tabs {
+    padding: 0;
+}
+
+/* Tab Navigation - Premium Pill Container */
+.tab-nav {
+    display: flex;
+    position: relative;
+    background: linear-gradient(135deg, rgba(69, 123, 157, 0.15) 0%, rgba(29, 53, 87, 0.12) 100%);
+    backdrop-filter: blur(10px);
+    padding: 4px;
+    border-radius: 14px;
+    margin: 18px 20px 0;
+    gap: 3px;
+    box-shadow: 
+        inset 0 1px 3px rgba(0, 0, 0, 0.1),
+        0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 11px 14px;
+    background: transparent;
+    border: none;
+    color: #6c757d;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 2;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    border-radius: 10px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.tab-btn:hover:not(.active) {
+    color: #495057;
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+}
+
+.tab-btn.active {
+    color: #1d3557;
+    font-weight: 700;
+    text-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Premium Pill Indicator with Gradient */
+.tab-indicator {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    height: calc(100% - 8px);
+    width: calc(33.333% - 6px);
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.98) 0%, 
+        rgba(255, 255, 255, 0.95) 50%,
+        rgba(232, 244, 248, 0.92) 100%);
+    transition: all 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 10px;
+    box-shadow: 
+        0 3px 12px rgba(29, 53, 87, 0.2),
+        0 1px 4px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        inset 0 -1px 0 rgba(69, 123, 157, 0.1);
+    z-index: 1;
+    border: 1px solid rgba(69, 123, 157, 0.15);
+}
+
+.tab-indicator[data-active="login"] {
+    transform: translateX(0);
+}
+
+.tab-indicator[data-active="register"] {
+    transform: translateX(calc(100% + 7px));
+}
+
+.tab-indicator[data-active="guest"] {
+    transform: translateX(calc(200% + 14px));
+}
+
+/* Tab Content */
+.tab-content-wrapper {
+    overflow: hidden;
+    position: relative;
+}
+
+.tab-panels {
+    display: flex;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 300%;
+}
+
+.tab-panels[data-current-tab="login"] {
+    transform: translateX(0);
+}
+
+.tab-panels[data-current-tab="register"] {
+    transform: translateX(-33.333%);
+}
+
+.tab-panels[data-current-tab="guest"] {
+    transform: translateX(-66.666%);
+}
+
+.tab-panel {
+    flex: 0 0 33.333%;
+    padding: 26px 24px 20px;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.tab-panel.active {
+    opacity: 1;
+}
+
+/* ========================================
+   FORM STYLES - COMPACT
+   ======================================== */
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group:last-of-type {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 7px;
+    color: #1d3557;
+    font-weight: 600;
+    font-size: 13px;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    letter-spacing: 0.2px;
+}
+
+/* Input Wrapper with Icons */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    font-size: 17px;
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 2;
+    transition: all 0.24s ease;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.input-wrapper input {
+    width: 100%;
+    padding: 12px 14px 12px 44px;
+    border: 1.5px solid rgba(69, 123, 157, 0.25);
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background: rgba(255, 255, 255, 0.85);
+    color: #1d3557;
+}
+
+.input-wrapper input::placeholder {
+    color: rgba(29, 53, 87, 0.45);
+    font-size: 13px;
+}
+
+.input-wrapper input:focus {
+    outline: none;
+    border-color: #457b9d;
+    border-width: 2px;
+    padding: 11px 13px 11px 43px;
+    box-shadow: 
+        0 0 0 3px rgba(69, 123, 157, 0.12),
+        0 2px 8px rgba(69, 123, 157, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.input-wrapper input:focus + .input-icon,
+.input-wrapper:focus-within .input-icon {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Password Toggle Button */
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    font-size: 17px;
+    opacity: 0.55;
+    transition: all 0.24s ease;
+    z-index: 2;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-password:hover {
+    opacity: 1;
+    transform: scale(1.12);
+}
+
+.toggle-password .eye-icon {
+    display: block;
+}
+
+/* Fallback for inputs without wrappers */
+.form-group input:not(.input-wrapper input) {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid rgba(69, 123, 157, 0.25);
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background: rgba(255, 255, 255, 0.85);
+    color: #1d3557;
+}
+
+.form-group input:not(.input-wrapper input):focus {
+    outline: none;
+    border-color: #457b9d;
+    border-width: 2px;
+    padding: 11px 13px;
+    box-shadow: 
+        0 0 0 3px rgba(69, 123, 157, 0.12),
+        0 2px 8px rgba(69, 123, 157, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* ========================================
+   BUTTONS - PREMIUM CTA WITH NAVY→CYAN GRADIENT
+   ======================================== */
+
+.btn {
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 11px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Be Vietnam Pro', sans-serif;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #1d3557 0%, #457b9d 50%, #5fa8c5 100%);
+    color: white;
+    box-shadow: 
+        0 4px 16px rgba(29, 53, 87, 0.4),
+        0 2px 8px rgba(69, 123, 157, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(95, 168, 197, 0.3);
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    transition: width 0.5s ease-out, height 0.5s ease-out;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 24px rgba(29, 53, 87, 0.5),
+        0 3px 12px rgba(69, 123, 157, 0.4),
+        0 0 20px rgba(95, 168, 197, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, #1d3557 0%, #457b9d 40%, #6bc1e0 100%);
+    border-color: rgba(107, 193, 224, 0.5);
+}
+
+.btn-primary:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-primary:active {
+    transform: translateY(0px);
+    box-shadow: 
+        0 2px 10px rgba(29, 53, 87, 0.45),
+        0 1px 5px rgba(69, 123, 157, 0.35),
+        inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary:focus {
+    outline: none;
+    box-shadow: 
+        0 4px 16px rgba(29, 53, 87, 0.4),
+        0 2px 8px rgba(69, 123, 157, 0.3),
+        0 0 0 4px rgba(95, 168, 197, 0.4);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Secondary Buttons */
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+}
+
+.btn-admin {
+    background: #9C27B0;
+    color: white;
+}
+
+.btn-admin:hover {
+    background: #7B1FA2;
+    transform: translateY(-2px);
+}
+
+.btn-small {
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+/* ========================================
+   GUEST PANEL - PREMIUM WITH STYLED ANCHOR
+   ======================================== */
+
+.guest-panel-content {
+    text-align: center;
+}
+
+.guest-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    animation: anchorFloat 2.5s ease-in-out infinite;
+    filter: 
+        drop-shadow(0 4px 12px rgba(69, 123, 157, 0.5))
+        drop-shadow(0 0 20px rgba(69, 123, 157, 0.3));
+    color: #457b9d;
+    display: inline-block;
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.2),
+        0 0 10px rgba(69, 123, 157, 0.4);
+}
+
+@keyframes anchorFloat {
+    0%, 100% { 
+        transform: translateY(0px) rotate(0deg);
+        filter: 
+            drop-shadow(0 4px 12px rgba(69, 123, 157, 0.5))
+            drop-shadow(0 0 20px rgba(69, 123, 157, 0.3));
+    }
+    25% { 
+        transform: translateY(-6px) rotate(-3deg);
+    }
+    50% {
+        transform: translateY(-8px) rotate(0deg);
+        filter: 
+            drop-shadow(0 6px 16px rgba(69, 123, 157, 0.6))
+            drop-shadow(0 0 30px rgba(69, 123, 157, 0.5));
+    }
+    75% { 
+        transform: translateY(-6px) rotate(3deg);
+    }
+}
+
+.guest-panel-content h3 {
+    font-size: 22px;
+    color: #1d3557;
+    margin-bottom: 8px;
+    font-weight: 700;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    letter-spacing: 0.3px;
+}
+
+.guest-description {
+    color: #457b9d;
+    margin-bottom: 24px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.guest-panel-content .form-group {
+    text-align: left;
+}
+
+/* ========================================
+   ERROR & SUCCESS MESSAGES - COMPACT
+   ======================================== */
+
+.error-message {
+    color: #dc3545;
+    font-size: 13px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(220, 53, 69, 0.1);
+    border-left: 3px solid #dc3545;
+    display: none;
+    animation: shake 0.35s ease;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.error-message.show {
+    display: block;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+}
+
+.success-message {
+    color: #28a745;
+    font-size: 13px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(40, 167, 69, 0.1);
+    border-left: 3px solid #28a745;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.switch-form {
+    text-align: center;
+    margin-top: 20px;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.switch-form a {
+    color: #457b9d;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.switch-form a:hover {
+    color: #1d3557;
+    text-decoration: underline;
+}
+
+.separator {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+    color: #6c757d;
+}
+
+.separator::before,
+.separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(69, 123, 157, 0.2);
+}
+
+.separator span {
+    padding: 0 15px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.6s linear infinite;
+    margin-left: 10px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   RESPONSIVE DESIGN - LOGO HERO SIZES
+   ======================================== */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 30px 20px;
+    }
+
+    .auth-header {
+        padding: 38px 20px 26px;
+    }
+
+    /* Logo Hero - Tablet - Phóng to */
+    .auth-header .game-logo {
+        width: 120px;
+    }
+
+    .auth-header h1 {
+        font-size: 32px;
+        letter-spacing: 0.6px;
+    }
+
+    .subtitle {
+        font-size: 12.5px;
+        letter-spacing: 0.2px;
+    }
+
+    .tab-nav {
+        margin: 16px 18px 0;
+    }
+
+    .tab-btn {
+        font-size: 12px;
+        padding: 10px 10px;
+        letter-spacing: 0.2px;
+    }
+
+    .tab-panel {
+        padding: 22px 18px 18px;
+    }
+}
+
+@media (max-width: 500px) {
+    .container {
+        padding: 24px 16px;
+    }
+
+    .auth-box {
+        border-radius: 18px;
+    }
+
+    .auth-header {
+        padding: 32px 18px 24px;
+    }
+
+    /* Logo Hero - Mobile */
+    .auth-header .game-logo {
+        width: 88px;
+    }
+
+    .auth-header h1 {
+        font-size: 28px;
+        letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+        font-size: 12px;
+        letter-spacing: 0.2px;
+    }
+
+    .tab-nav {
+        margin: 14px 16px 0;
+        padding: 3px;
+    }
+
+    .tab-btn {
+        font-size: 11px;
+        padding: 9px 6px;
+    }
+
+    .tab-panel {
+        padding: 20px 16px 16px;
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .guest-icon {
+        font-size: 54px;
+        margin-bottom: 12px;
+    }
+
+    .guest-panel-content h3 {
+        font-size: 20px;
+    }
+
+    .guest-description {
+        margin-bottom: 20px;
+        font-size: 13px;
+    }
+
+    .btn {
+        padding: 13px 18px;
+        font-size: 14px;
+    }
+}
+
+/* Extra small devices (360px and below) */
+@media (max-width: 360px) {
+    .container {
+        padding: 20px 12px;
+    }
+
+    .auth-box {
+        max-width: 100%;
+    }
+
+    .auth-header {
+        padding: 28px 16px 22px;
+    }
+
+    /* Logo Hero - Extra Small */
+    .auth-header .game-logo {
+        width: 80px;
+    }
+
+    .auth-header h1 {
+        font-size: 24px;
+        letter-spacing: 0.4px;
+    }
+
+    .subtitle {
+        font-size: 11px;
+        margin-top: 8px;
+        letter-spacing: 0.1px;
+    }
+
+    .tab-nav {
+        margin: 12px 14px 0;
+        padding: 3px;
+        gap: 2px;
+    }
+
+    .tab-btn {
+        font-size: 10px;
+        padding: 8px 4px;
+        letter-spacing: 0.1px;
+    }
+
+    .tab-indicator {
+        width: calc(33.333% - 5px);
+    }
+
+    .tab-indicator[data-active="register"] {
+        transform: translateX(calc(100% + 5px));
+    }
+
+    .tab-indicator[data-active="guest"] {
+        transform: translateX(calc(200% + 10px));
+    }
+
+    .tab-panel {
+        padding: 18px 14px 14px;
+    }
+
+    .form-group label {
+        font-size: 12px;
+    }
+
+    .input-wrapper input {
+        font-size: 13px;
+        padding: 11px 12px 11px 40px;
+    }
+
+    .input-icon {
+        font-size: 15px;
+        left: 12px;
+    }
+
+    .btn {
+        padding: 12px 16px;
+        font-size: 13px;
+    }
+
+    .guest-icon {
+        font-size: 48px;
+    }
+
+    .guest-panel-content h3 {
+        font-size: 18px;
+    }
+}
+
+/* ========================================
+   HEIGHT-BASED RESPONSIVE (Small Laptops)
+   ======================================== */
+
+/* Medium height screens (768px - 900px) - 13-14 inch laptops */
+@media (max-height: 900px) {
+    .container {
+        padding: 20px 20px;
+        justify-content: flex-start;
+    }
+
+    .auth-box {
+        margin: 20px 0;
+        max-height: 95vh;
+        overflow-y: auto;
+    }
+
+    .auth-header {
+        padding: 30px 20px 20px;
+    }
+
+    .auth-header .game-logo {
+        width: 100px;
+    }
+
+    .auth-header h1 {
+        font-size: 30px;
+    }
+
+    .subtitle {
+        font-size: 12.5px;
+    }
+
+    .tab-panel {
+        padding: 20px 20px 16px;
+    }
+
+    .form-group {
+        margin-bottom: 14px;
+    }
+
+    .guest-icon {
+        font-size: 52px;
+        margin-bottom: 10px;
+    }
+}
+
+/* Small height screens (600px - 768px) - 11-12 inch laptops */
+@media (max-height: 768px) {
+    body {
+        overflow-y: auto;
+    }
+
+    .container {
+        padding: 15px 20px;
+        justify-content: flex-start;
+        min-height: auto;
+    }
+
+    .auth-box {
+        margin: 15px 0;
+        max-height: none;
+        overflow-y: visible;
+    }
+
+    .auth-header {
+        padding: 24px 18px 18px;
+    }
+
+    .auth-header .logo-container {
+        margin-bottom: 16px;
+    }
+
+    .auth-header .game-logo {
+        width: 80px;
+    }
+
+    .auth-header h1 {
+        font-size: 26px;
+        letter-spacing: 1px;
+    }
+
+    .subtitle {
+        font-size: 12px;
+        margin-top: 8px;
+    }
+
+    .tab-nav {
+        margin: 14px 18px 0;
+        padding: 3px;
+    }
+
+    .tab-btn {
+        padding: 9px 10px;
+        font-size: 12px;
+    }
+
+    .tab-panel {
+        padding: 18px 18px 14px;
+    }
+
+    .form-group {
+        margin-bottom: 12px;
+    }
+
+    .form-group:last-of-type {
+        margin-bottom: 16px;
+    }
+
+    .form-group label {
+        margin-bottom: 6px;
+        font-size: 12.5px;
+    }
+
+    .input-wrapper input {
+        padding: 10px 12px 10px 40px;
+        font-size: 13.5px;
+    }
+
+    .input-wrapper input:focus {
+        padding: 9px 11px 9px 39px;
+    }
+
+    .input-icon {
+        font-size: 16px;
+        left: 12px;
+    }
+
+    .toggle-password {
+        font-size: 16px;
+    }
+
+    .btn {
+        padding: 12px 18px;
+        font-size: 14px;
+    }
+
+    .guest-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    .guest-panel-content h3 {
+        font-size: 20px;
+        margin-bottom: 6px;
+    }
+
+    .guest-description {
+        margin-bottom: 18px;
+        font-size: 13px;
+    }
+
+    .error-message,
+    .success-message {
+        margin-top: 10px;
+        padding: 9px 12px;
+        font-size: 12.5px;
+    }
+}
+
+/* Extra small height screens (< 600px) - Netbooks/Small laptops */
+@media (max-height: 600px) {
+    .container {
+        padding: 10px 16px;
+    }
+
+    .auth-box {
+        margin: 10px 0;
+        border-radius: 16px;
+    }
+
+    .auth-header {
+        padding: 18px 16px 14px;
+    }
+
+    .auth-header .logo-container {
+        margin-bottom: 12px;
+    }
+
+    .auth-header .game-logo {
+        width: 65px;
+    }
+
+    .auth-header h1 {
+        font-size: 22px;
+        letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+        font-size: 11px;
+        margin-top: 6px;
+    }
+
+    .tab-nav {
+        margin: 12px 16px 0;
+        padding: 3px;
+    }
+
+    .tab-btn {
+        padding: 8px 8px;
+        font-size: 11px;
+    }
+
+    .tab-panel {
+        padding: 16px 16px 12px;
+    }
+
+    .form-group {
+        margin-bottom: 10px;
+    }
+
+    .form-group:last-of-type {
+        margin-bottom: 14px;
+    }
+
+    .form-group label {
+        margin-bottom: 5px;
+        font-size: 12px;
+    }
+
+    .input-wrapper input {
+        padding: 9px 11px 9px 38px;
+        font-size: 13px;
+        border-radius: 8px;
+    }
+
+    .input-wrapper input:focus {
+        padding: 8px 10px 8px 37px;
+    }
+
+    .input-icon {
+        font-size: 15px;
+        left: 11px;
+    }
+
+    .toggle-password {
+        font-size: 15px;
+        padding: 5px;
+    }
+
+    .btn {
+        padding: 11px 16px;
+        font-size: 13px;
+        border-radius: 9px;
+    }
+
+    .guest-icon {
+        font-size: 40px;
+        margin-bottom: 8px;
+    }
+
+    .guest-panel-content h3 {
+        font-size: 18px;
+        margin-bottom: 5px;
+    }
+
+    .guest-description {
+        margin-bottom: 16px;
+        font-size: 12px;
+    }
+
+    .error-message,
+    .success-message {
+        margin-top: 8px;
+        padding: 8px 11px;
+        font-size: 12px;
+    }
+
+    .switch-form {
+        margin-top: 16px;
+        font-size: 13px;
+    }
+
+    .separator {
+        margin: 16px 0;
+    }
+}
+
+/* Combined: Small laptop (width + height) */
+@media (max-width: 1366px) and (max-height: 768px) {
+    .container {
+        padding: 12px 18px;
+    }
+
+    .auth-box {
+        max-width: 400px;
+    }
+
+    .tab-panel {
+        padding: 16px 18px 14px;
+    }
+}
+
+/* Combined: Very small screens (old netbooks) */
+@media (max-width: 1024px) and (max-height: 600px) {
+    .container {
+        padding: 8px 14px;
+    }
+
+    .auth-box {
+        max-width: 380px;
+        margin: 8px 0;
+    }
+
+    .auth-header {
+        padding: 16px 14px 12px;
+    }
+
+    .tab-panel {
+        padding: 14px 14px 12px;
+    }
+
+    .form-group {
+        margin-bottom: 9px;
+    }
+}
+
+/* Landscape tablets with keyboard (iPad landscape) */
+@media (max-width: 1024px) and (max-height: 768px) and (orientation: landscape) {
+    .container {
+        justify-content: flex-start;
+        padding: 10px 20px;
+    }
+
+    .auth-box {
+        margin: 10px auto;
+    }
+
+    .auth-header {
+        padding: 20px 18px 16px;
+    }
+
+    .guest-icon {
+        font-size: 44px;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .tab-nav {
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+    }
+    
+    .tab-panels {
+        touch-action: pan-x;
+    }
+
+    .btn-primary:hover {
+        transform: none;
+    }
+
+    .btn-primary:active {
+        transform: scale(0.98);
+    }
+}
+
+/* Smooth scrolling for small screens */
+@media (max-height: 768px) {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .auth-box {
+        /* Smooth internal scrolling if needed */
+        -webkit-overflow-scrolling: touch;
+    }
+}

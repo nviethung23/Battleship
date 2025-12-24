@@ -1,0 +1,699 @@
+/* ========================================
+   BATTLESHIP GAME - PREMIUM AUTH UI
+   Theme: Modern Naval Warfare
+   ======================================== */
+
+/* Global Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Body - Background with Naval Theme */
+body {
+    font-family: 'Be Vietnam Pro', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: url('../images/background/index.png') center/cover no-repeat fixed;
+    min-height: 100vh;
+    position: relative;
+    color: #1d3557;
+}
+
+/* Overlay for better contrast */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(10, 25, 47, 0.85) 0%, rgba(29, 53, 87, 0.75) 50%, rgba(69, 123, 157, 0.65) 100%);
+    z-index: -1;
+}
+
+/* Container */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* Logo Container */
+.logo-container {
+    text-align: center;
+    margin-bottom: 30px;
+    animation: fadeInDown 0.8s ease-out;
+}
+
+.game-logo {
+    width: 180px;
+    height: auto;
+    transform: scale(1.4);
+    transform-origin: center;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4)) drop-shadow(0 4px 8px rgba(69, 123, 157, 0.5));
+    animation: logoFloat 3s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+    0%, 100% { transform: translateY(0px) scale(1.4); }
+    50% { transform: translateY(-10px) scale(1.4); }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Auth Box - Glass Effect */
+.auth-box {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 4px 16px rgba(69, 123, 157, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    max-width: 480px;
+    width: 100%;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.auth-box:hover {
+    box-shadow: 
+        0 12px 48px rgba(0, 0, 0, 0.4),
+        0 6px 24px rgba(69, 123, 157, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transform: translateY(-4px);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Auth Header - Naval Theme */
+.auth-header {
+    text-align: center;
+    padding: 35px 30px 25px;
+    background: linear-gradient(135deg, rgba(10, 25, 47, 0.95) 0%, rgba(29, 53, 87, 0.9) 50%, rgba(69, 123, 157, 0.85) 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 50px,
+        rgba(255, 255, 255, 0.03) 50px,
+        rgba(255, 255, 255, 0.03) 51px
+    );
+    z-index: 0;
+}
+
+.auth-header h1 {
+    font-family: 'Black Ops One', 'Courier New', monospace;
+    font-size: 36px;
+    font-weight: 400;
+    margin: 0;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.3),
+        0 4px 8px rgba(0, 0, 0, 0.2),
+        0 0 20px rgba(69, 123, 157, 0.5);
+    position: relative;
+    z-index: 1;
+}
+
+.subtitle {
+    font-size: 14px;
+    margin-top: 8px;
+    opacity: 0.9;
+    letter-spacing: 1px;
+    font-weight: 500;
+}
+
+/* ========================================
+   TAB NAVIGATION SYSTEM
+   ======================================== */
+
+.auth-tabs {
+    padding: 0;
+}
+
+/* Tab Navigation */
+.tab-nav {
+    display: flex;
+    position: relative;
+    background: linear-gradient(to bottom, rgba(248, 249, 250, 0.95), rgba(248, 249, 250, 0.85));
+    backdrop-filter: blur(10px);
+    padding: 0;
+    border-bottom: 1px solid rgba(69, 123, 157, 0.2);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 18px 20px;
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+    font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.tab-btn:hover {
+    color: #1d3557;
+    background: rgba(69, 123, 157, 0.08);
+}
+
+.tab-btn.active {
+    color: #1d3557;
+    font-weight: 700;
+}
+
+/* Sliding Indicator */
+.tab-indicator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #457b9d 0%, #1d3557 50%, #457b9d 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 -2px 8px rgba(69, 123, 157, 0.4);
+    z-index: 0;
+}
+
+.tab-indicator[data-active="login"] {
+    width: 33.333%;
+    transform: translateX(0);
+}
+
+.tab-indicator[data-active="register"] {
+    width: 33.333%;
+    transform: translateX(100%);
+}
+
+.tab-indicator[data-active="guest"] {
+    width: 33.333%;
+    transform: translateX(200%);
+}
+
+/* Tab Content */
+.tab-content-wrapper {
+    overflow: hidden;
+    position: relative;
+}
+
+.tab-panels {
+    display: flex;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 300%;
+}
+
+.tab-panels[data-current-tab="login"] {
+    transform: translateX(0);
+}
+
+.tab-panels[data-current-tab="register"] {
+    transform: translateX(-33.333%);
+}
+
+.tab-panels[data-current-tab="guest"] {
+    transform: translateX(-66.666%);
+}
+
+.tab-panel {
+    flex: 0 0 33.333%;
+    padding: 35px 30px;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.tab-panel.active {
+    opacity: 1;
+}
+
+/* ========================================
+   FORM STYLES
+   ======================================== */
+
+.form-group {
+    margin-bottom: 22px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 10px;
+    color: #1d3557;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    letter-spacing: 0.3px;
+}
+
+/* Input Wrapper with Icons */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 16px;
+    font-size: 18px;
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+.input-wrapper input {
+    width: 100%;
+    padding: 14px 16px 14px 48px;
+    border: 2px solid rgba(69, 123, 157, 0.25);
+    border-radius: 12px;
+    font-size: 15px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background: rgba(255, 255, 255, 0.8);
+    color: #1d3557;
+}
+
+.input-wrapper input::placeholder {
+    color: rgba(29, 53, 87, 0.5);
+}
+
+.input-wrapper input:focus {
+    outline: none;
+    border-color: #457b9d;
+    box-shadow: 
+        0 0 0 4px rgba(69, 123, 157, 0.15),
+        0 4px 12px rgba(69, 123, 157, 0.2);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.input-wrapper input:focus + .input-icon,
+.input-wrapper:focus-within .input-icon {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Password Toggle Button */
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    font-size: 18px;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+    z-index: 2;
+    line-height: 1;
+}
+
+.toggle-password:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.toggle-password .eye-icon {
+    display: block;
+}
+
+/* Fallback for inputs without wrappers */
+.form-group input:not(.input-wrapper input) {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid rgba(69, 123, 157, 0.25);
+    border-radius: 12px;
+    font-size: 15px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background: rgba(255, 255, 255, 0.8);
+    color: #1d3557;
+}
+
+.form-group input:not(.input-wrapper input):focus {
+    outline: none;
+    border-color: #457b9d;
+    box-shadow: 
+        0 0 0 4px rgba(69, 123, 157, 0.15),
+        0 4px 12px rgba(69, 123, 157, 0.2);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+
+.btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Be Vietnam Pro', sans-serif;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #457b9d 0%, #1d3557 100%);
+    color: white;
+    box-shadow: 
+        0 6px 20px rgba(29, 53, 87, 0.4),
+        0 3px 10px rgba(69, 123, 157, 0.3);
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+        0 8px 28px rgba(29, 53, 87, 0.5),
+        0 4px 14px rgba(69, 123, 157, 0.4);
+}
+
+.btn-primary:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-primary:active {
+    transform: translateY(-1px);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Secondary Buttons */
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+}
+
+.btn-admin {
+    background: #9C27B0;
+    color: white;
+}
+
+.btn-admin:hover {
+    background: #7B1FA2;
+    transform: translateY(-2px);
+}
+
+.btn-small {
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+/* ========================================
+   GUEST PANEL
+   ======================================== */
+
+.guest-panel-content {
+    text-align: center;
+}
+
+.guest-icon {
+    font-size: 72px;
+    margin-bottom: 24px;
+    animation: floatBounce 2s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(69, 123, 157, 0.3));
+}
+
+@keyframes floatBounce {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    25% { transform: translateY(-8px) rotate(-5deg); }
+    75% { transform: translateY(-8px) rotate(5deg); }
+}
+
+.guest-panel-content h3 {
+    font-size: 26px;
+    color: #1d3557;
+    margin-bottom: 12px;
+    font-weight: 700;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    letter-spacing: 0.5px;
+}
+
+.guest-description {
+    color: #457b9d;
+    margin-bottom: 32px;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.guest-panel-content .form-group {
+    text-align: left;
+}
+
+/* ========================================
+   ERROR & SUCCESS MESSAGES
+   ======================================== */
+
+.error-message {
+    color: #dc3545;
+    font-size: 14px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(220, 53, 69, 0.1);
+    border-left: 4px solid #dc3545;
+    display: none;
+    animation: shake 0.4s ease;
+    font-weight: 500;
+}
+
+.error-message.show {
+    display: block;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+.success-message {
+    color: #28a745;
+    font-size: 14px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(40, 167, 69, 0.1);
+    border-left: 4px solid #28a745;
+    font-weight: 500;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.switch-form {
+    text-align: center;
+    margin-top: 20px;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.switch-form a {
+    color: #457b9d;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.switch-form a:hover {
+    color: #1d3557;
+    text-decoration: underline;
+}
+
+.separator {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+    color: #6c757d;
+}
+
+.separator::before,
+.separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(69, 123, 157, 0.2);
+}
+
+.separator span {
+    padding: 0 15px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.6s linear infinite;
+    margin-left: 10px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+    .auth-header h1 {
+        font-size: 28px;
+        letter-spacing: 2px;
+    }
+
+    .tab-btn {
+        font-size: 14px;
+        padding: 16px 12px;
+    }
+
+    .tab-panel {
+        padding: 30px 25px;
+    }
+}
+
+@media (max-width: 500px) {
+    .auth-box {
+        border-radius: 20px;
+    }
+
+    .auth-header {
+        padding: 30px 20px 20px;
+    }
+
+    .auth-header h1 {
+        font-size: 24px;
+        letter-spacing: 1.5px;
+    }
+
+    .tab-btn {
+        font-size: 13px;
+        padding: 14px 10px;
+    }
+
+    .tab-panel {
+        padding: 25px 20px;
+    }
+
+    .guest-icon {
+        font-size: 60px;
+    }
+
+    .guest-panel-content h3 {
+        font-size: 22px;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .tab-nav {
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+    }
+    
+    .tab-panels {
+        touch-action: pan-x;
+    }
+
+    .btn-primary:hover {
+        transform: none;
+    }
+
+    .btn-primary:active {
+        transform: scale(0.98);
+    }
+}

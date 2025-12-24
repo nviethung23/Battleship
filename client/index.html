@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battleship Game - Login</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crosslink>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/style.css?v=2.3">
+</head>
+<body>
+    <div class="container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <!-- Logo trong header với glow effect -->
+                <div class="logo-container">
+                    <img src="images/logo.png" alt="Battleship Logo" class="game-logo">
+                </div>
+                <h1>Battleship Game</h1>
+                <p class="subtitle">Game Hải Chiến Trực Tuyến</p>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="auth-tabs">
+                <div class="tab-nav">
+                    <button class="tab-btn active" data-tab="login">Đăng Nhập</button>
+                    <button class="tab-btn" data-tab="register">Đăng Ký</button>
+                    <button class="tab-btn" data-tab="guest">Chơi Khách</button>
+                    <div class="tab-indicator"></div>
+                </div>
+
+                <!-- Tab Content Container -->
+                <div class="tab-content-wrapper">
+                    <div class="tab-panels" data-current-tab="login">
+                        
+                        <!-- Login Panel -->
+                        <div class="tab-panel active" data-panel="login">
+                            <form id="loginFormElement">
+                                <div class="form-group">
+                                    <label for="loginUsername">Tên đăng nhập</label>
+                                    <div class="input-wrapper">
+                                        <span class="input-icon">👤</span>
+                                        <input type="text" id="loginUsername" required minlength="3" placeholder="Nhập tên đăng nhập">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="loginPassword">Mật khẩu</label>
+                                    <div class="input-wrapper">
+                                        <span class="input-icon">🔒</span>
+                                        <input type="password" id="loginPassword" required minlength="6" placeholder="Nhập mật khẩu">
+                                        <button type="button" class="toggle-password" data-target="loginPassword">
+                                            <span class="eye-icon">👁️</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Đăng Nhập</button>
+                                <div class="error-message" id="loginError"></div>
+                            </form>
+                        </div>
+
+                        <!-- Register Panel -->
+                        <div class="tab-panel" data-panel="register">
+                            <form id="registerFormElement">
+                                <div class="form-group">
+                                    <label for="registerUsername">Tên đăng nhập</label>
+                                    <div class="input-wrapper">
+                                        <span class="input-icon">👤</span>
+                                        <input type="text" id="registerUsername" required minlength="3" placeholder="Ít nhất 3 ký tự">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="registerEmail">Email (tùy chọn)</label>
+                                    <div class="input-wrapper">
+                                        <span class="input-icon">✉️</span>
+                                        <input type="email" id="registerEmail" placeholder="email@example.com">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="registerPassword">Mật khẩu</label>
+                                    <div class="input-wrapper">
+                                        <span class="input-icon">🔒</span>
+                                        <input type="password" id="registerPassword" required minlength="6" placeholder="Ít nhất 6 ký tự">
+                                        <button type="button" class="toggle-password" data-target="registerPassword">
+                                            <span class="eye-icon">👁️</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="registerPasswordConfirm">Xác nhận mật khẩu</label>
+                                    <div class="input-wrapper">
+                                        <span class="input-icon">🔒</span>
+                                        <input type="password" id="registerPasswordConfirm" required minlength="6" placeholder="Nhập lại mật khẩu">
+                                        <button type="button" class="toggle-password" data-target="registerPasswordConfirm">
+                                            <span class="eye-icon">👁️</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Đăng Ký</button>
+                                <div class="error-message" id="registerError"></div>
+                            </form>
+                        </div>
+
+                        <!-- Guest Panel -->
+                        <div class="tab-panel" data-panel="guest">
+                            <div class="guest-panel-content">
+                                
+                                <h3>Chơi với tư cách khách</h3>
+                                <p class="guest-description">Bắt đầu chơi ngay không cần đăng ký</p>
+                                
+                                <div class="form-group">
+                                    <label for="guestNameInput">Tên của bạn</label>
+                                    <div class="input-wrapper">
+                                        <span class="input-icon">👤</span>
+                                        <input 
+                                            type="text" 
+                                            id="guestNameInput" 
+                                            placeholder="Ví dụ: Captain Sailor" 
+                                            maxlength="30"
+                                            autocomplete="off"
+                                        >
+                                    </div>
+                                </div>
+                                
+                                <div class="error-message" id="guestErrorMessage"></div>
+                                
+                                <button id="guestSubmitBtn" class="btn btn-primary"> Bắt Đầu Chơi</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/authTabs.js"></script>
+    <script src="js/guestLogin.js"></script>
+    <script src="js/passwordToggle.js"></script>
+</body>
+</html>
+

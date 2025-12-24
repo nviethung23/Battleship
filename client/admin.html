@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Battleship Game</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="css/style.css?v=2.3">
+    <link rel="stylesheet" href="css/admin.css?v=2.3">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <img src="images/logo.png" alt="Battleship Logo" class="admin-logo">
+                <h1>Admin</h1>
+                <p class="admin-subtitle">Battleship Game</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/game" class="nav-item" id="backToGameBtn" style="background: rgba(76, 175, 80, 0.2); border-left-color: #4CAF50;">
+                    <span class="nav-icon">🏠</span>
+                    <span>Quay về Game</span>
+                </a>
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-page="users">
+                    <span class="nav-icon">👥</span>
+                    <span>Users</span>
+                </a>
+                <a href="#" class="nav-item" data-page="games">
+                    <span class="nav-icon">🎮</span>
+                    <span>Games</span>
+                </a>
+                <a href="#" class="nav-item" data-page="statistics">
+                    <span class="nav-icon">📈</span>
+                    <span>Statistics</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="admin-info">
+                    <span class="admin-avatar">👤</span>
+                    <div>
+                        <div class="admin-name" id="adminName">Admin</div>
+                        <div class="admin-role">Administrator</div>
+                    </div>
+                </div>
+                <button id="logoutBtn" class="btn-logout">Đăng xuất</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Header -->
+            <header class="admin-header">
+                <h2 id="pageTitle">Dashboard</h2>
+                <div class="header-actions">
+                    <span class="current-time" id="currentTime"></span>
+                </div>
+            </header>
+
+            <!-- Dashboard Page -->
+            <div id="dashboardPage" class="admin-page active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="statTotalUsers">0</div>
+                            <div class="stat-label">Total Users</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎮</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="statTotalGames">0</div>
+                            <div class="stat-label">Total Games</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="statGamesToday">0</div>
+                            <div class="stat-label">Games Today</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="statAvgDuration">0</div>
+                            <div class="stat-label">Avg Duration (s)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Games Last 7 Days</h3>
+                        <div id="gamesChart" class="chart-container">
+                            <canvas id="gamesChartCanvas"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Top 10 Players</h3>
+                        <div id="topPlayersList" class="top-players-list">
+                            <!-- Will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Page -->
+            <div id="usersPage" class="admin-page">
+                <div class="page-header">
+                    <div class="search-box">
+                        <input type="text" id="userSearch" placeholder="Search users..." />
+                    </div>
+                    <div class="filter-box">
+                        <select id="roleFilter">
+                            <option value="">All Roles</option>
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Total Games</th>
+                                <th>Win Rate</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Games Page -->
+            <div id="gamesPage" class="admin-page">
+                <div class="page-header">
+                    <div class="search-box">
+                        <input type="text" id="gameSearch" placeholder="Search games..." />
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Game ID</th>
+                                <th>Player 1</th>
+                                <th>Player 2</th>
+                                <th>Winner</th>
+                                <th>Duration</th>
+                                <th>Started At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gamesTableBody">
+                            <!-- Will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Statistics Page -->
+            <div id="statisticsPage" class="admin-page">
+                <div class="stats-detail-grid">
+                    <div class="detail-card">
+                        <h3>User Statistics</h3>
+                        <div class="detail-content">
+                            <div class="detail-item">
+                                <span>Total Users:</span>
+                                <strong id="detailTotalUsers">0</strong>
+                            </div>
+                            <div class="detail-item">
+                                <span>Admins:</span>
+                                <strong id="detailAdmins">0</strong>
+                            </div>
+                            <div class="detail-item">
+                                <span>Regular Users:</span>
+                                <strong id="detailRegularUsers">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-card">
+                        <h3>Game Statistics</h3>
+                        <div class="detail-content">
+                            <div class="detail-item">
+                                <span>Total Games:</span>
+                                <strong id="detailTotalGames">0</strong>
+                            </div>
+                            <div class="detail-item">
+                                <span>Games Today:</span>
+                                <strong id="detailGamesToday">0</strong>
+                            </div>
+                            <div class="detail-item">
+                                <span>Last 7 Days:</span>
+                                <strong id="detailGames7Days">0</strong>
+                            </div>
+                            <div class="detail-item">
+                                <span>Avg Duration:</span>
+                                <strong id="detailAvgDuration">0</strong>s
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
+

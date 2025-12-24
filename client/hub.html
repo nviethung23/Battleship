@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battleship - Hub</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Ensure Black Ops One loads immediately */
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&display=block');
+    </style>
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css?v=2.3">
+    <link rel="stylesheet" href="css/hub.css?v=2.3">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Lobby Screen - Minimal Hero Layout -->
+        <div id="lobbyScreen" class="screen hub">
+            <!-- Background + Overlay -->
+            <div class="image-background lobby-bg"></div>
+            <div class="hub__overlay"></div>
+            
+            <!-- Hub Container (2 columns) -->
+            <div class="hub__container">
+                <!-- Main Card wrapping everything -->
+                <div class="hub__main-card">
+                    <!-- Top Bar: User Info + Logout (inside card) -->
+                    <div class="hub__topbar">
+                        <div class="hub__user-chip">
+                            <span class="hub__status-dot"></span>
+                            <span id="hubUsername" class="hub__username">Player</span>
+                            <span class="hub__user-sep">•</span>
+                            <span id="hubUserId" class="hub__user-id">ID: ----</span>
+                        </div>
+                        <button id="hubLogoutBtn" class="hub__logout-btn">
+                            <span class="hub__logout-icon">🚪</span>
+                            <span class="hub__logout-text">Đăng xuất</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Content Grid (2 columns) -->
+                    <div class="hub__content-grid">
+                <!-- Left Column: Logo + Title + Character -->
+                <div class="hub__left">
+                    <!-- Logo -->
+                    <div class="hub__logo">
+                        <img src="images/logo.png" alt="Battleship Logo" class="hub__logo-img">
+                    </div>
+                    
+                    <!-- Title & Subtitle -->
+                    <div class="hub__text">
+                        <h1 class="hub__title" style="font-family: 'Black Ops One', system-ui !important;">BATTLE SHIP</h1>
+                        <p class="hub__subtitle">Chiến trường hải chiến • Trận chiến kịch tính</p>
+                    </div>
+                    
+                    <!-- Character Switcher -->
+                    <div class="hub__character">
+                        <!-- Character Display with shadow -->
+                        <div class="hub__character-wrap">
+                            <img id="heroCharacterImg" src="images/characters/character1/avatar-large.png" alt="Character" class="hub__character-img">
+                            <div class="hub__character-shadow"></div>
+                        </div>
+                        
+                        <!-- Character Name Badge -->
+                        <div class="hub__character-badge">
+                            <span id="heroCharacterName">Captain Morgan</span>
+                        </div>
+                        
+                        <!-- Character Thumbnails -->
+                        <div class="hub__character-thumbs">
+                            <button class="hub__thumb hub__thumb--active" data-char-id="0">
+                                <img src="images/characters/character1/avatar-thumb.png" alt="Character 1">
+                            </button>
+                            <button class="hub__thumb" data-char-id="1">
+                                <img src="images/characters/character2/avatar-thumb.png" alt="Character 2">
+                            </button>
+                            <button class="hub__thumb" data-char-id="2">
+                                <img src="images/characters/character3/avatar-thumb.png" alt="Character 3">
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column: All Action Buttons & Panels -->
+                <div class="hub__right">
+                    <!-- Quick Play Button -->
+                        <button id="btnQuickPlay" class="hub__btn hub__btn--primary">
+                        <span class="hub__btn-icon">⚡</span>
+                        <span class="hub__btn-content">
+                            <span class="hub__btn-text">Chơi Ngay</span>
+                            <span class="hub__btn-desc">Ghép trận tự động</span>
+                        </span>
+                    </button>
+                    
+                    <!-- Create Private Room Button -->
+                    <button id="btnCreatePrivateRoom" class="hub__btn hub__btn--secondary">
+                        <span class="hub__btn-icon">🔒</span>
+                        <span class="hub__btn-content">
+                            <span class="hub__btn-text">Tạo Phòng Riêng</span>
+                            <span class="hub__btn-desc">Tạo mã phòng để mời bạn</span>
+                        </span>
+                    </button>
+                    
+                    <!-- Join Room Panel -->
+                    <div class="hub__join-panel">
+                        <h3 class="hub__join-title">Tham Gia Phòng</h3>
+                        <p class="hub__join-subtitle">Nhập mã phòng để chơi với bạn bè</p>
+                        
+                        <!-- Panel Form -->
+                        <div class="hub__join-form">
+                            <input 
+                                type="text" 
+                                id="inputRoomCode" 
+                                class="hub__join-input" 
+                                placeholder="NHẬP MÃ (6 KÝ TỰ)" 
+                                maxlength="6"
+                                autocomplete="off"
+                            >
+                            <button id="btnJoinPrivateRoom" class="hub__join-btn">
+                                <span class="hub__join-btn-icon">🤝</span>
+                                <span class="hub__join-btn-text">Tham Gia</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Helper Text -->
+                        <p class="hub__join-helper">💡 Mã phòng gồm 6 ký tự in hoa</p>
+                    </div>
+                </div>
+                    </div> <!-- End hub__content-grid -->
+                </div> <!-- End hub__main-card -->
+            </div>
+            
+            <!-- Queue Waiting Overlay -->
+            <div id="searchingOverlay" class="queue-overlay" style="display: none;">
+                <div class="queue-content">
+                    <div class="queue-spinner"></div>
+                    <h3>Đang tìm đối thủ...</h3>
+                    <p>Vui lòng chờ trong giây lát</p>
+                    <button id="btnCancelQueue" class="btn-cancel-queue">Huỷ tìm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/shared/state.js"></script>
+    <script src="js/shared/socket-shared.js"></script>
+    <script src="js/hub.js"></script>
+</body>
+</html>

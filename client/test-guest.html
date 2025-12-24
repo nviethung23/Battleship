@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Guest Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            min-height: 100px;
+            border: 2px solid #ccc;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        #result:empty::before {
+            content: 'Waiting for action...';
+            color: #999;
+            font-style: italic;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Guest Login API</h1>
+    
+    <div class="section">
+        <h3>1. Test API</h3>
+        <div>
+            <label for="guestName">Guest Name:</label>
+            <input type="text" id="guestName" value="TestUser" />
+        </div>
+        
+        <button id="btnTestGuestLogin">Test Guest Login</button>
+        <button id="btnTestHealth">Test Health API</button>
+    </div>
+
+    <div class="section">
+        <h3>2. Check LocalStorage</h3>
+        <button id="btnCheckLocalStorage">Check LocalStorage</button>
+        <button id="btnClearLocalStorage">Clear LocalStorage</button>
+    </div>
+
+    <div class="section">
+        <h3>3. Manual Navigation</h3>
+        <button id="btnGoToGame">Go to /game</button>
+        <button id="btnGoToLogin">Go to /login</button>
+    </div>
+    
+    <div id="result"></div>
+
+    <script>
+        // Test script loaded
+        console.log('✅ Test script loaded!');
+        
+        function showResult(text) {
+            console.log('[showResult]', text);
+            const resultDiv = document.getElementById('result');
+            if (resultDiv) {
+                resultDiv.textContent = text;
+            } else {
+                console.error('Result div not found!');
+            }
+        }
+
+        async function testHealth() {
+            console.log('🧪 Testing health...');
+            showResult('Testing...');
+            
+            try {
+                const response = await fetch('/api/health');
+                console.log('Health response:', response);
+                const data = await response.json();
+                console.log('Health data:', data);
+                showResult('Health Check: ' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                console.error('Health error:', error);
+                showResult('Error: ' + error.message);
+            }
+        }
+
+        async function testGuestLogin() {
+            console.log('🧪 Testing guest login...');
+            const guestName = document.getElementById('guestName').value;
+            console.log('Guest name:', guestName);
+            showResult('Testing guest login...');
+            
+            try {
+                console.log('Sending POST request to /api/guest-login');
+                const response = await fetch('/api/guest-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ guestName })
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok) {
+                    // Save to localStorage like the real code
+                    console.log('Saving to localStorage...');
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userId', data.user.id);
+                    localStorage.setItem('username', data.user.username);
+                    localStorage.setItem('isGuest', 'true');
+                    localStorage.setItem('guestDisplayName', data.user.guestName);
+                    console.log('✅ Saved to localStorage');
+
+                    showResult('Success!\nResponse: ' + JSON.stringify(data, null, 2) + 
+                              '\n\nLocalStorage saved:\n' +
+                              'token: ' + (localStorage.getItem('token') || 'null').substring(0, 20) + '...\n' +
+                              'userId: ' + localStorage.getItem('userId') + '\n' +
+                              'username: ' + localStorage.getItem('username') + '\n' +
+                              'isGuest: ' + localStorage.getItem('isGuest') + '\n' +
+                              'guestDisplayName: ' + localStorage.getItem('guestDisplayName'));
+                    
+                    console.log('✅ Guest login successful:', data);
+                } else {
+                    console.error('❌ Error response:', data);
+                    showResult('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('❌ Network Error:', error);
+                showResult('Network Error: ' + error.message);
+            }
+        }
+
+        function checkLocalStorage() {
+            console.log('🧪 Checking localStorage...');
+            const items = {
+                token: localStorage.getItem('token'),
+                userId: localStorage.getItem('userId'),
+                username: localStorage.getItem('username'),
+                isGuest: localStorage.getItem('isGuest'),
+                guestDisplayName: localStorage.getItem('guestDisplayName')
+            };
+
+            console.log('LocalStorage items:', items);
+
+            let result = 'LocalStorage Contents:\n';
+            for (const [key, value] of Object.entries(items)) {
+                if (value) {
+                    const display = key === 'token' && value.length > 50 
+                        ? value.substring(0, 50) + '...' 
+                        : value;
+                    result += `${key}: ${display}\n`;
+                } else {
+                    result += `${key}: (not set)\n`;
+                }
+            }
+            
+            showResult(result);
+        }
+
+        function clearLocalStorage() {
+            console.log('🧪 Clearing localStorage...');
+            localStorage.clear();
+            console.log('✅ LocalStorage cleared');
+            showResult('LocalStorage cleared!');
+        }
+
+        function goToGame() {
+            console.log('🧪 Going to /game...');
+            window.location.href = '/game';
+        }
+
+        function goToLogin() {
+            console.log('🧪 Going to /...');
+            window.location.href = '/';
+        }
+
+        // Test on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('✅ Test page loaded - DOMContentLoaded');
+            console.log('Result div:', document.getElementById('result'));
+            console.log('Guest name input:', document.getElementById('guestName'));
+            
+            // Add event listeners to buttons
+            document.getElementById('btnTestGuestLogin').addEventListener('click', testGuestLogin);
+            document.getElementById('btnTestHealth').addEventListener('click', testHealth);
+            document.getElementById('btnCheckLocalStorage').addEventListener('click', checkLocalStorage);
+            document.getElementById('btnClearLocalStorage').addEventListener('click', clearLocalStorage);
+            document.getElementById('btnGoToGame').addEventListener('click', goToGame);
+            document.getElementById('btnGoToLogin').addEventListener('click', goToLogin);
+            console.log('✅ Event listeners attached');
+        });
+
+        console.log('✅ Script parsing complete');
+    </script>
+</body>
+</html>
