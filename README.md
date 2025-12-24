@@ -1,608 +1,225 @@
 # 🚢 Battleship Multiplayer Online Game
 
-Game Hải Chiến trực tuyến 2 người chơi, real-time với WebSocket, WebRTC, MongoDB, Node.js, Express, JWT, bảo mật cao, UI đẹp, hỗ trợ voice/video call.
+Game Hải Chiến 2 người chơi, realtime trên web: **Quick Play / Private Room**, **chat realtime**, hỗ trợ **voice/video call (WebRTC)**, lưu lịch sử trận đấu vào **MongoDB**, có **Admin Panel**.
 
 ---
-## 🎯 Tính năng nổi bật
 
-- Đăng ký/Đăng nhập với JWT Authentication
-- Chơi Battleship 2 người real-time (Quick Play, Private Room)
-- Chat real-time trong trận đấu
+## Mục lục
+- [Demo](#demo)
+- [Tính năng](#tính-năng)
+- [Tech Stack](#tech-stack)
+- [Cài đặt nhanh (Local)](#cài-đặt-nhanh-local)
+- [Cấu hình .env](#cấu-hình-env)
+- [Scripts](#scripts)
+- [Cấu trúc thư mục](#cấu-trúc-thư-mục)
+- [Hướng dẫn chơi](#hướng-dẫn-chơi)
+- [Admin Panel](#admin-panel)
+- [Deploy (gợi ý)](#deploy-gợi-ý)
+- [Troubleshooting](#troubleshooting)
+- [Security Notes](#security-notes)
+- [Tài liệu kỹ thuật](#tài-liệu-kỹ-thuật)
+- [Đóng góp](#đóng-góp)
+- [License](#license)
 
-## 🚀 Cài đặt nhanh
+---
 
-### 1. Yêu cầu
-- Node.js v18+
-- MongoDB Atlas account (free tier)
+## Demo
+- Local: `http://localhost:3000`
+- Admin: `http://localhost:3000/admin`
 
-### 2. Clone & cài đặt
+> Bạn có thể thêm screenshot/gif vào đây sau (ví dụ: `./filemd/...`).
+
+---
+
+## Tính năng
+
+### 🎮 Gameplay
+- ✅ Quick Play: ghép trận tự động
+- ✅ Private Room: tạo/join phòng bằng mã
+- ✅ Chọn nhân vật/skin (tuỳ cấu hình project)
+- ✅ Đặt tàu kéo-thả (drag & drop), xoay, random, reset
+- ✅ Turn-based: bắn trúng bắn tiếp, trượt đổi lượt
+- ✅ Timer mỗi lượt (mặc định 60s)
+
+### 💬 Realtime & Communication
+- ✅ Realtime sync bằng Socket.IO (WebSocket)
+- ✅ Chat realtime trong trận
+- ✅ Voice/Video call bằng WebRTC (signaling qua Socket.IO)
+
+### 🧠 Data & Admin
+- ✅ Lưu lịch sử trận đấu vào MongoDB
+- ✅ Admin Panel: quản lý users/games/thống kê, phân quyền admin
+
+### 🔒 Security (mức cơ bản)
+- ✅ JWT Auth
+- ✅ Rate limiting / input validation / hardening (tuỳ cấu hình server)
+
+---
+
+## Tech Stack
+- **Backend**: Node.js, Express, Socket.IO
+- **Frontend**: HTML/CSS/JS (Vanilla)
+- **Database**: MongoDB (Atlas)
+- **Auth**: JWT
+- **Realtime**: Socket.IO (WebSocket)
+- **Voice/Video**: WebRTC
+
+---
+
+## Cài đặt nhanh (Local)
+
+### 1) Yêu cầu
+- Node.js **18+**
+- MongoDB Atlas (free tier OK)
+
+### 2) Clone & cài dependencies
 ```bash
 git clone https://github.com/nviethung23/Battleship
-cd battleship
+cd Battleship
 npm install
 ```
 
-### 3. Cấu hình môi trường
-Tạo file `.env`:
+### 3) Tạo file `.env`
+```bash
+cp .env.example .env
+```
+
+### 4) Chạy project
+```bash
+# Dev
+npm run dev
+
+# Prod
+npm start
+```
+
+---
+
+## Cấu hình .env
+Mở `.env` và cập nhật tối thiểu:
 ```env
 PORT=3000
 NODE_ENV=development
+
 JWT_SECRET=your-super-secret-jwt-key
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/battleship?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/<db>?retryWrites=true&w=majority
 ```
 
-### 4. Tạo tài khoản admin (tùy chọn)
+Gợi ý generate secret nhanh:
 ```bash
-npm run create-admin
-# Tạo user admin/admin123 (nên đổi pass sau khi đăng nhập)
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-### 5. Chạy server
+---
+
+## Scripts
+(Tùy theo `package.json` của repo, thường sẽ có các lệnh sau)
+- `npm start` — chạy production
+- `npm run dev` — chạy dev (auto-restart)
+- `npm run create-admin` — tạo tài khoản admin (nếu project có script này)
+
+---
+
+## Cấu trúc thư mục
+```txt
+Battleship/
+├─ client/          # Frontend (HTML/CSS/JS/assets)
+├─ server/          # Backend (Express/Socket.IO/api)
+├─ public/          # Static public (fonts/assets nếu có)
+├─ filemd/          # Tài liệu/ảnh minh hoạ (tuỳ repo)
+├─ .env.example
+├─ CREATE_ADMIN.md
+├─ QUICKSTART.md
+├─ package.json
+└─ README.md
+```
+
+---
+
+## Hướng dẫn chơi
+1. **Login / Register** hoặc **Guest**
+2. Vào **Hub** → chọn **Quick Play** hoặc **Create/Join Room**
+3. Vào **Lobby** → chọn character (nếu có) → **Ready**
+4. **Deploy**: đặt 5 tàu (kéo thả, xoay, random)
+5. **Battle**: bắn theo lượt  
+   - Trúng → tiếp tục  
+   - Trượt → đổi lượt
+6. Kết thúc: **Win/Lose**, xem lại lịch sử (nếu có UI)
+
+**Luật tàu chuẩn**:
+- Carrier: 5 ô
+- Battleship: 4 ô
+- Cruiser: 3 ô
+- Submarine: 3 ô
+- Destroyer: 2 ô
+
+---
+
+## Admin Panel
+- Truy cập: `/admin`
+- Cần đăng nhập user có role/admin.
+- Tham khảo hướng dẫn chi tiết tại `CREATE_ADMIN.md`.
+
+---
+
+## Deploy (gợi ý)
+Một flow deploy phổ biến (EC2 + PM2):
+
+1) SSH vào server, pull code, cài deps:
 ```bash
-# Production
-npm start
-# Development (auto-restart)
-npm run dev
+git pull
+npm ci --omit=dev || npm install
 ```
 
-### 6. Truy cập
-| URL | Mô tả |
-|-----|-------|
-| http://localhost:3000 | Game chính |
-| http://localhost:3000/admin | Admin Panel |
-
-## 🛠️ Công nghệ sử dụng
-
-- **Backend**: Node.js 18+, Express.js, Socket.IO 4.x
-- **Frontend**: HTML5, CSS3, Vanilla JS
-- **Database**: MongoDB Atlas (Mongoose)
-- **Real-time**: Socket.IO (WebSocket)
-- **Video Call**: WebRTC (native)
-- **Authentication**: JWT
-- **Security**: Helmet, Rate Limiting, Input Validation, bcrypt
-
-## 📁 Cấu trúc thư mục
-```
-battleship/
-├── client/      # Frontend (HTML, CSS, JS, images)
-├── server/      # Backend (Express, Socket.IO, models, controllers)
-├── .env         # Environment variables
-├── package.json
-└── README.md
+2) Set `.env` production, rồi chạy PM2:
+```bash
+pm2 start <entry> --name battleship
+pm2 save
+pm2 status
+pm2 logs battleship --lines 200
 ```
 
-## 🎮 Hướng dẫn chơi
-
-1. Đăng ký tài khoản hoặc chơi Guest
-2. Đăng nhập, vào Hub chọn Quick Play hoặc tạo/join phòng
-3. Đặt tàu (kéo thả, xoay, random)
-4. Sẵn sàng, chờ đối thủ, bắt đầu chơi
-5. Bắn theo lượt (trúng bắn tiếp, trượt chuyển lượt)
-6. Chat, gọi video, xem kết quả, quay lại Hub
-
-**Luật chơi:**
-- Carrier: 5 ô | Battleship: 4 ô | Cruiser: 3 ô | Submarine: 3 ô | Destroyer: 2 ô
-- Bắn trúng → bắn tiếp, bắn trượt → chuyển lượt, phá hết tàu đối thủ → thắng
-
-**Phím tắt:**
-- `R`: Xoay tàu | `Enter`: Gửi chat
-
-## 👨‍💼 Admin Panel
-- Truy cập `/admin` sau khi đăng nhập với tài khoản admin
-- Quản lý users, games, thống kê, promote/demote admin
+3) (Khuyến nghị) Dùng Nginx reverse proxy + HTTPS (Let’s Encrypt / ACM).
 
 ---
 
-## 🐛 Troubleshooting
-
-- **MongoDB Connection Error**: Kiểm tra MONGODB_URI trong .env, whitelist IP trên Atlas
-- **Port Already in Use**: Đổi PORT trong .env hoặc kill process đang dùng port 3000
-- **Socket Connection Failed**: Đảm bảo server đang chạy, kiểm tra token, check browser console
-- **Admin Panel Access Denied**: Đảm bảo user có role: 'admin', đăng nhập lại
-
----
-
-## 📖 Tài liệu kỹ thuật
-| File | Mô tả |
-|------|-------|
-| [SYSTEM_FLOW_ACCURATE.md](SYSTEM_FLOW_ACCURATE.md) | Data Flow Diagram - Socket Events |
-| [ACTIVITY_FLOW_DIAGRAM.md](ACTIVITY_FLOW_DIAGRAM.md) | Activity Diagrams - User Flow |
-| [DATABASE_SCHEMA_ERD.md](DATABASE_SCHEMA_ERD.md) | ERD - Database Schema |
+## Troubleshooting
+- **MongoDB connection lỗi**
+  - Check `MONGODB_URI`
+  - Atlas: whitelist IP / mở đúng Network Access
+- **Port đã bị chiếm**
+  - đổi `PORT` hoặc stop process đang giữ port
+- **Socket connect fail**
+  - check server chạy chưa, check CORS, check token/JWT, check console browser
+- **Admin bị chặn**
+  - user phải có role admin, logout/login lại để refresh token/role
 
 ---
 
-## 🤝 Đóng góp
+## Security Notes
+- **Không commit cert/key**: `cert.pem`, `key.pem` nên nằm ngoài repo (hoặc secret store).
+- Nếu lỡ commit public: **rotate/re-issue certificate và key ngay**.
+- Trên server: set permission cho private key:
+  ```bash
+  chmod 600 key.pem
+  ```
+
+---
+
+## Tài liệu kỹ thuật
+- `SYSTEM_FLOW_ACCURATE.md` — Socket events / data flow
+- `ACTIVITY_FLOW_DIAGRAM.md` — activity/user flow
+- `DATABASE_SCHEMA_ERD.md` — ERD/schema
+
+---
+
+## Đóng góp
 1. Fork repo
-2. Tạo branch mới (`git checkout -b feature/ten-tinh-nang`)
-3. Commit & push (`git commit -m 'Add feature'`)
+2. Tạo branch (`git checkout -b feature/<ten>`)
+3. Commit & push
 4. Mở Pull Request
 
 ---
 
-## 📄 License
-ISC License - xem [LICENSE](LICENSE) để biết chi tiết.
-# 🚢 BATTLESHIP - Multiplayer Online Game# 🚢 Battleship Multiplayer Game
-
-
-
-<div align="center">Game Hải Chiến trực tuyến với WebSocket và WebRTC
-
-
-
-![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white)## 🎯 Tính năng
-
-![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
-
-![Socket.IO](https://img.shields.io/badge/Socket.IO-4.x-010101?style=for-the-badge&logo=socket.io&logoColor=white)- ✅ Đăng ký/Đăng nhập với JWT Authentication
-
-![WebRTC](https://img.shields.io/badge/WebRTC-Video%20Call-333333?style=for-the-badge&logo=webrtc&logoColor=white)- ✅ Game Battleship 2 người chơi real-time
-
-- ✅ Chat real-time
-
-**Game Hải Chiến trực tuyến 2 người chơi với Real-time Communication**- ✅ Voice/Video call (WebRTC)
-
-- ✅ Timer mỗi lượt (60 giây)
-
-[Demo](#-demo) • [Tính năng](#-tính-năng) • [Cài đặt](#-cài-đặt) • [Hướng dẫn](#-hướng-dẫn-chơi) • [Tài liệu](#-tài-liệu-kỹ-thuật)- ✅ Lưu lịch sử trận đấu vào MongoDB
-
-- ✅ Admin Panel (quản lý users, games, statistics)
-
-</div>- ✅ Bảo mật: Rate limiting, Input validation, XSS protection
-
-
-
----## 🚀 Cài đặt
-
-
-
-## 📸 Demo### 1. Yêu cầu
-
-- Node.js v16+ 
-
-| Login | Hub | Lobby |- MongoDB Atlas account (free tier)
-
-|:---:|:---:|:---:|
-
-| Đăng nhập/Đăng ký/Guest | Quick Play/Private Room | Chờ đối thủ & Ready |### 2. Clone và cài đặt
-
-```bash
-
-| Ship Deployment | Battle | Game Over |git clone <repository-url>
-
-|:---:|:---:|:---:|cd <repository-url>
-
-| Kéo thả đặt 5 tàu | Bắn và nhận kết quả | Win/Lose với avatar |npm install
-
-```
-
----
-
-### 3. Cấu hình Environment Variables
-
-## ✨ Tính năng
-
-Tạo file `.env` từ `.env.example`:
-
-### 🎮 Gameplay```bash
-
-- ✅ **Quick Play** - Ghép trận tự động với người chơi ngẫu nhiêncp .env.example .env
-
-- ✅ **Private Room** - Tạo phòng riêng với mã 6 ký tự```
-
-- ✅ **3 Characters** - Chọn nhân vật với avatar win/lose riêng
-
-- ✅ **Drag & Drop** - Kéo thả đặt tàu trực quanChỉnh sửa `.env`:
-
-- ✅ **Turn-based** - Bắn trúng → tiếp tục, Bắn trượt → đổi lượt```env
-
-- ✅ **60s Timer** - Giới hạn thời gian mỗi lượtPORT=3000
-
-NODE_ENV=development
-
-### 💬 CommunicationJWT_SECRET=your-super-secret-jwt-key
-
-- ✅ **Real-time Chat** - Nhắn tin trong trận đấuMONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/battleship?retryWrites=true&w=majority
-
-- ✅ **Video Call** - Gọi video WebRTC với đối thủ```
-
-- ✅ **System Messages** - Thông báo join/leave/ready
-
-**Lưu ý:**
-
-### 🔐 Authentication- `JWT_SECRET`: Tạo random string (dùng lệnh: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
-
-- ✅ **Register/Login** - Tài khoản với JWT- `MONGODB_URI`: Lấy từ MongoDB Atlas dashboard
-
-- ✅ **Guest Mode** - Chơi không cần đăng ký (TTL 24h)
-
-- ✅ **Admin Panel** - Quản lý users, games, statistics### 4. Tạo Admin Account
-
-
-
-### 🛡️ Security```bash
-
-- ✅ **Rate Limiting** - Chống brute forcenpm run create-admin
-
-- ✅ **Input Sanitization** - Chống XSS```
-
-- ✅ **Password Hashing** - bcrypt
-
-- ✅ **Security Headers** - HelmetSẽ tạo user `admin` với password `admin123` (nên đổi sau khi đăng nhập)
-
-
-
----## ▶️ Chạy server
-
-
-
-## 🏗️ Kiến trúc hệ thống```bash
-
-npm start
-
-``````
-
-┌─────────────────────────────────────────────────────────────────┐
-
-│                         CLIENT                                   │Hoặc chế độ dev (auto-restart):
-
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────┐│```bash
-
-│  │index.html│  │hub.html │  │lobby.html│ │game.html│  │admin.html│npm run dev
-
-│  │ (Auth)  │  │ (Menu)  │  │(Waiting)│  │(Battle) │  │(Admin) ││```
-
-│  └─────────┘  └─────────┘  └─────────┘  └─────────┘  └────────┘│
-
-│                          │                                       │## 🌐 Truy cập
-
-│              Socket.IO + REST API + WebRTC                       │
-
-└─────────────────────────────┬───────────────────────────────────┘- **Game**: http://localhost:3000
-
-                              │- **Admin Panel**: http://localhost:3000/admin (cần đăng nhập với admin account)
-
-┌─────────────────────────────▼───────────────────────────────────┐
-
-│                         SERVER                                   │## 📝 Cách chơi
-
-│  ┌──────────────────────────────────────────────────────────┐   │
-
-│  │                    Express.js + Socket.IO                 │   │1. Đăng ký tài khoản (username, password)
-
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │   │2. Đăng nhập
-
-│  │  │ gameHandler │  │ chatHandler │  │webrtcHandler│       │   │3. Tạo phòng hoặc tham gia phòng có sẵn
-
-│  │  └─────────────┘  └─────────────┘  └─────────────┘       │   │4. Đặt tàu của bạn (5 tàu) - có thể kéo thả, xoay, hoặc random
-
-│  └──────────────────────────────────────────────────────────┘   │5. Chờ đối thủ sẵn sàng và bắt đầu chơi!
-
-│                              │                                   │6. Click vào ô để bắn
-
-│  ┌──────────────────────────▼───────────────────────────────┐   │7. **Luật chơi**: Bắn trúng → được bắn tiếp, bắn trượt → chuyển lượt
-
-│  │                     MongoDB Atlas                         │   │8. Người phá hủy hết tàu đối thủ trước sẽ thắng!
-
-│  │    users | games | chatmessages | calllogs               │   │
-
-│  └──────────────────────────────────────────────────────────┘   │## 🛠️ Công nghệ
-
-└─────────────────────────────────────────────────────────────────┘
-
-```### Backend
-
-- **Framework**: Node.js + Express
-
----- **Real-time**: Socket.IO (WebSocket)
-
-- **Database**: MongoDB Atlas (Mongoose)
-
-## 🛠️ Tech Stack- **Authentication**: JWT (JSON Web Tokens)
-
-- **Security**: Helmet, Rate Limiting, Input Validation
-
-| Layer | Technology |
-
-|-------|------------|### Frontend
-
-| **Frontend** | HTML5, CSS3, Vanilla JavaScript |- **HTML/CSS/JavaScript** (Vanilla)
-
-| **Backend** | Node.js 18+, Express.js |- **WebRTC**: Simple-peer (Voice/Video calls)
-
-| **Real-time** | Socket.IO 4.x |- **Charts**: Chart.js (Admin statistics)
-
-| **Video Call** | WebRTC (native) |
-
-| **Database** | MongoDB Atlas (Mongoose ODM) |### Security Features
-
-| **Auth** | JWT (JSON Web Tokens) |- ✅ Rate limiting (chống brute force)
-
-| **Security** | Helmet, bcrypt, Rate Limiting |- ✅ Input sanitization (chống XSS)
-
-- ✅ Password hashing (bcrypt)
-
----- ✅ JWT authentication
-
-- ✅ Security headers (Helmet)
-
-## 🚀 Cài đặt- ✅ MongoDB injection protection
-
-
-
-### Yêu cầu## 👨‍💼 Admin Panel
-
-- **Node.js** v18 trở lên
-
-- **MongoDB Atlas** account (free tier OK)Truy cập `/admin` sau khi đăng nhập với admin account:
-
-- **Git**
-
-- **Dashboard**: Tổng quan thống kê
-
-### Bước 1: Clone repository- **Users**: Quản lý users (xem, xóa, promote/demote admin)
-
-- **Games**: Xem lịch sử trận đấu
-
-```bash- **Statistics**: Thống kê chi tiết
-
-git clone https://github.com/nviethung23/Battleship
-
-cd battleship
-## 🔒 Bảo mật
-
-```
-
-- **Rate Limiting**: 
-
-### Bước 2: Cài đặt dependencies  - Auth routes: 5 requests / 15 phút
-
-  - API routes: 100 requests / 15 phút
-
-```bash- **Input Validation**: 
-
-npm install  - Username: 3-20 ký tự, chỉ chữ/số/underscore
-
-```  - Password: 6-100 ký tự, có chữ hoa/thường/số
-
-- **XSS Protection**: Sanitize tất cả user input
-
-### Bước 3: Cấu hình Environment- **MongoDB Injection**: Dùng Mongoose (tự động escape)
-
-
-
-Tạo file `.env`:## 📚 Scripts
-
-
-
-```env- `npm start` - Chạy server
-
-PORT=3000- `npm run dev` - Chạy server với auto-restart (nodemon)
-
-NODE_ENV=development- `npm run create-admin` - Tạo admin account
-
-JWT_SECRET=your-super-secret-jwt-key-here
-
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/battleship?retryWrites=true&w=majority## 🐛 Troubleshooting
-
-```
-
-### MongoDB Connection Error
-
-> 💡 **Tạo JWT_SECRET:**- Kiểm tra `MONGODB_URI` trong `.env`
-
-> ```bash- Đảm bảo IP whitelist trong MongoDB Atlas cho phép kết nối
-
-> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-
-> ```### Port đã được sử dụng
-
-- Đổi `PORT` trong `.env` hoặc kill process đang dùng port 3000
-
-### Bước 4: Tạo Admin Account (Optional)
-
-### Admin panel không hiển thị
-
-```bash- Đảm bảo user có `role: 'admin'` trong MongoDB
-
-npm run create-admin- Đăng nhập lại để có token mới với role
-
-```
-
-> Tạo user `admin` / password `admin123`## 📄 License
-
-
-
-### Bước 5: Chạy serverISC
-
-
-
-```bash
-# Production
-npm start
-
-# Development (auto-restart)
-npm run dev
-```
-
-### Bước 6: Truy cập
-
-| URL | Mô tả |
-|-----|-------|
-| http://localhost:3000 | Game chính |
-| http://localhost:3000/admin | Admin Panel |
-
----
-
-## 🎮 Hướng dẫn chơi
-
-### Flow chơi game
-
-```
-1. LOGIN      →  Đăng nhập / Đăng ký / Guest
-       ↓
-2. HUB        →  Chọn: Quick Play | Create Room | Join Room
-       ↓
-3. LOBBY      →  Chờ đối thủ, chọn Character, bấm Ready
-       ↓
-4. DEPLOYMENT →  Kéo thả 5 tàu vào bảng 10x10
-       ↓
-5. BATTLE     →  Bắn vào bảng đối thủ, 60s/lượt
-       ↓
-6. GAME OVER  →  Xem kết quả, Back to Hub
-```
-
-### Luật chơi
-
-| Tàu | Kích thước |
-|-----|------------|
-| Carrier | 5 ô |
-| Battleship | 4 ô |
-| Cruiser | 3 ô |
-| Submarine | 3 ô |
-| Destroyer | 2 ô |
-
-- **Bắn trúng** → Được bắn tiếp
-- **Bắn trượt** → Chuyển lượt đối thủ
-- **Phá hủy hết tàu** đối thủ → **Thắng!**
-
-### Phím tắt
-
-| Phím | Chức năng |
-|------|-----------|
-| `R` | Xoay tàu (khi đặt tàu) |
-| `Enter` | Gửi chat |
-
----
-
-## 📁 Cấu trúc thư mục
-
-```
-battleship/
-├── client/                     # Frontend
-│   ├── index.html              # Login page
-│   ├── hub.html                # Main menu
-│   ├── lobby.html              # Waiting room
-│   ├── game.html               # Game page
-│   ├── admin.html              # Admin panel
-│   ├── css/
-│   │   ├── style.css           # Login styles
-│   │   ├── hub.css             # Hub styles
-│   │   ├── lobby.css           # Lobby styles
-│   │   ├── game.css            # Game styles (deploy + battle)
-│   │   └── admin.css           # Admin styles
-│   ├── js/
-│   │   ├── auth.js             # Login/Register logic
-│   │   ├── guestLogin.js       # Guest login
-│   │   ├── hub.js              # Hub logic
-│   │   ├── lobby.js            # Lobby logic
-│   │   ├── game.js             # Game logic (main)
-│   │   ├── battle.js           # Battle logic
-│   │   ├── chat.js             # Chat logic
-│   │   ├── webrtc.js           # Video call
-│   │   ├── characters.js       # Character selection
-│   │   └── shared/
-│   │       ├── socket-shared.js # Socket connection
-│   │       └── state.js         # Client state management
-│   └── images/
-│       └── characters/         # Character avatars
-│
-├── server/                     # Backend
-│   ├── server.js               # Main entry point
-│   ├── config/
-│   │   ├── database.js         # Database helper
-│   │   ├── mongodb.js          # MongoDB connection
-│   │   └── guest.js            # Guest TTL config
-│   ├── controllers/
-│   │   ├── authController.js   # Auth logic
-│   │   └── adminController.js  # Admin logic
-│   ├── middleware/
-│   │   ├── auth.js             # JWT middleware
-│   │   ├── admin.js            # Admin check
-│   │   ├── validation.js       # Input validation
-│   │   └── guestActivity.js    # Guest activity tracking
-│   ├── models/
-│   │   ├── User.js             # User schema
-│   │   ├── Game.js             # Game schema
-│   │   ├── ChatMessage.js      # Chat schema (7-day TTL)
-│   │   └── CallLog.js          # Call log schema
-│   ├── socket/
-│   │   ├── gameHandler.js      # Game socket events
-│   │   ├── chatHandler.js      # Chat socket events
-│   │   └── webrtcHandler.js    # WebRTC signaling
-│   └── utils/
-│       └── gameLogic.js        # Game rules & validation
-│
-├── .env                        # Environment variables
-├── package.json
-└── README.md
-```
-
----
-
-## 📖 Tài liệu kỹ thuật
-
-| File | Mô tả |
-|------|-------|
-| [SYSTEM_FLOW_ACCURATE.md](SYSTEM_FLOW_ACCURATE.md) | Data Flow Diagram - Socket Events |
-| [ACTIVITY_FLOW_DIAGRAM.md](ACTIVITY_FLOW_DIAGRAM.md) | Activity Diagrams - User Flow |
-| [DATABASE_SCHEMA_ERD.md](DATABASE_SCHEMA_ERD.md) | ERD - Database Schema (SQL style) |
-
----
-
-## 🔧 Scripts
-
-| Script | Mô tả |
-|--------|-------|
-| `npm start` | Chạy server production |
-| `npm run dev` | Chạy server với nodemon |
-| `npm run create-admin` | Tạo admin account |
-
----
-
-## 🐛 Troubleshooting
-
-### MongoDB Connection Error
-```
-Kiểm tra MONGODB_URI trong .env
-Whitelist IP trong MongoDB Atlas Network Access
-```
-
-### Port Already in Use
-```bash
-# Windows
-netstat -ano | findstr :3000
-taskkill /PID <PID> /F
-
-# Hoặc đổi PORT trong .env
-```
-
-### Socket Connection Failed
-```
-Kiểm tra token trong localStorage/sessionStorage
-Đảm bảo server đang chạy
-Check browser console for errors
-```
-
-### Admin Panel Access Denied
-```
-Đảm bảo user có role: 'admin' trong database
-Đăng nhập lại để refresh token
-```
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
----
-
-## 📄 License
-
-ISC License - see [LICENSE](LICENSE) for details.
-
----
+## License
+ISC — xem `LICENSE`.
