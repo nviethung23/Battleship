@@ -908,3 +908,124 @@ body {
         font-size: 15px;
     }
 }
+
+
+
+/* Allow scrolling when content exceeds viewport */
+.hub{
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Keep background/overlay stable while hub scrolls */
+.image-background{ position: fixed; }
+.hub__overlay{ position: fixed; }
+
+/* Prevent container from forcing vertical center on short screens */
+@media (max-height: 820px){
+  .hub__container{
+    align-items: flex-start;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  /* Constrain the card and scroll inside it (Facebook-like), scrollbar hidden */
+  .hub__main-card{
+    max-height: calc(100svh - 48px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* legacy */
+  }
+  .hub__main-card::-webkit-scrollbar{
+    width: 0;
+    height: 0;
+  }
+
+  /* Scale down heavy visuals for 768h laptops */
+  .hub__title{ font-size: 52px; }
+  .hub__logo{ width: 190px; height: 190px; }
+  .hub__character-wrap{ width: 280px; height: 350px; }
+  .hub__character-img{ width: 252px; height: 322px; }
+  .hub__btn{ padding: 18px 26px; }
+}
+
+/* Even tighter for very short heights */
+@media (max-height: 740px){
+  .hub__main-card{ border-radius: 26px; padding: 18px; gap: 22px; }
+  .hub__content-grid{ gap: 36px; }
+  .hub__title{ font-size: 46px; }
+  .hub__subtitle{ font-size: 14px; }
+  .hub__logo{ width: 160px; height: 160px; }
+  .hub__character-wrap{ width: 240px; height: 300px; }
+  .hub__character-img{ width: 216px; height: 276px; }
+}
+
+/* 1) Allow full-page scrolling on every screen */
+html, body { height: auto; }
+
+body{
+  height: auto !important;
+  min-height: 100svh;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 2) Make hub wrapper NOT block scrolling */
+.hub{
+  min-height: 100svh;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* 3) Hide scrollbar but keep scroll (Facebook-like) */
+body{
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* Legacy Edge */
+}
+body::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+/* (Optional) avoid overlay blocking gestures (usually already ok) */
+.hub__overlay{ pointer-events: none; }
+
+/* ===== Hide scrollbar but keep scrolling (Facebook-like) ===== */
+
+/* Page scroll */
+html{
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* Legacy Edge */
+}
+html::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+body{
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* Legacy Edge */
+}
+body::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+/* Any scrollable container (optional but recommended) */
+.hub,
+.hub__main-card,
+.tab-panel.active{
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hub::-webkit-scrollbar,
+.hub__main-card::-webkit-scrollbar,
+.tab-panel.active::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}

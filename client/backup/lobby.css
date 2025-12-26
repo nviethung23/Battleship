@@ -107,7 +107,7 @@ body {
 /* Main Lobby Wrapper */
 .lobby-main-wrapper {
     position: relative;
-    height: 100vh;
+    min-height: 100svh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -551,39 +551,54 @@ body {
 }
 
 /* =========================================================
-   LOBBY SCROLLBAR HIDE FIX (html scrolling element)
-   Why scrollbar still visible:
-   - In Chromium/Edge, the scrolling element is often <html>, not <body>.
-     Styling body::-webkit-scrollbar won't hide it.
-   Fix:
-   - Force html to be the scroller and hide its scrollbar too.
-   - Keep body scrollable fallback.
+   LOBBY: Global scroll + hidden scrollbar (UI-only)
    ========================================================= */
 
-html{
+/* Allow full-page vertical scroll on all screens */
+html, body {
+  height: auto;
+}
+
+body{
   min-height: 100svh;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   -webkit-overflow-scrolling: touch;
-
-  /* Hide scrollbar (Firefox/Edge legacy) */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-html::-webkit-scrollbar{
-  width: 0;
-  height: 0;
 }
 
-/* Keep body as fallback scroller (some setups still scroll body) */
+/* 2) Wrapper lobby KHÔNG khóa scroll */
+.lobby{
+  min-height: 100svh;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* 3) Ẩn scrollbar nhưng vẫn cuộn */
 body{
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* Edge cũ */
 }
 body::-webkit-scrollbar{
   width: 0;
   height: 0;
+}
+
+/* 4) Nếu lobby có container cuộn riêng thì cũng ẩn luôn */
+.lobby,
+.lobby__container,
+.lobby-main-wrapper{
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.lobby::-webkit-scrollbar,
+.lobby__container::-webkit-scrollbar,
+.lobby-main-wrapper::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+/* 5) Background/overlay không chặn thao tác cuộn */
+.image-background,
+.lobby__overlay{
+  pointer-events: none;
 }

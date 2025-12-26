@@ -1,10 +1,4 @@
-/**
- * Auth Tabs - Modern Tab System with Swipe Support
- * UI-only upgrades:
- *  - Fit tab-content-wrapper height to active panel (removes large blank space on Login)
- *  - Enable internal scrolling ONLY on Register tab (body stays non-scroll, no page scrollbar)
- * Does NOT change auth/login/register/guest logic.
- */
+
 
 class AuthTabs {
     constructor() {
@@ -16,8 +10,6 @@ class AuthTabs {
         this.tabIndicator = document.querySelector('.tab-indicator');
         this.tabPanels = document.querySelector('.tab-panels');
         this.tabPanelElements = document.querySelectorAll('.tab-panel');
-
-        // NEW: wrapper used to remove blank space
         this.contentWrapper = document.querySelector('.tab-content-wrapper');
 
         // Swipe tracking
@@ -40,8 +32,8 @@ class AuthTabs {
         });
 
         // Swipe events
-        this.tabPanels.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: true });
-        this.tabPanels.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: true });
+        this.tabPanels.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+        this.tabPanels.addEventListener('touchmove', (e) => this.handleTouchMove(e));
         this.tabPanels.addEventListener('touchend', (e) => this.handleTouchEnd(e));
 
         // Mouse events for desktop testing
@@ -50,11 +42,11 @@ class AuthTabs {
         this.tabPanels.addEventListener('mouseup', (e) => this.handleTouchEnd(e));
         this.tabPanels.addEventListener('mouseleave', (e) => this.handleTouchEnd(e));
 
-        // UI-only: initial height sync + on resize
+        // Fit wrapper height on load + on resize (small laptop heights)
         this.syncAuthHeight();
         window.addEventListener('resize', () => this.syncAuthHeight());
 
-        // UI-only: if register rules expand while typing, keep wrapper in sync
+        // If your password rules UI changes height while typing
         const registerPassword = document.getElementById('registerPassword');
         if (registerPassword) {
             registerPassword.addEventListener('input', () => this.syncAuthHeight());
@@ -78,10 +70,10 @@ class AuthTabs {
         });
 
         // Update indicator
-        if (this.tabIndicator) this.tabIndicator.setAttribute('data-active', tab);
+        this.tabIndicator.setAttribute('data-active', tab);
 
         // Update panels
-        if (this.tabPanels) this.tabPanels.setAttribute('data-current-tab', tab);
+        this.tabPanels.setAttribute('data-current-tab', tab);
 
         // Update panel visibility
         this.tabPanelElements.forEach(panel => {
@@ -92,29 +84,26 @@ class AuthTabs {
             }
         });
 
-        // Clear any error messages when switching tabs (existing behavior)
-        const loginErr = document.getElementById('loginError');
-        const regErr = document.getElementById('registerError');
-        const guestErr = document.getElementById('guestErrorMessage');
-        if (loginErr) loginErr.textContent = '';
-        if (regErr) regErr.textContent = '';
-        if (guestErr) guestErr.textContent = '';
+        // Clear any error messages when switching tabs
+        document.getElementById('loginError').textContent = '';
+        document.getElementById('registerError').textContent = '';
+        document.getElementById('guestErrorMessage').textContent = '';
 
-        // UI-only: resync height + enable internal scroll only on register
+        // UI only: fit wrapper to active panel, and enable scroll only for register
         this.syncAuthHeight();
     }
 
-    // UI-only helper
     syncAuthHeight() {
         if (!this.contentWrapper || !this.tabPanels) return;
 
         const activePanel = this.tabPanels.querySelector('.tab-panel.active');
         if (!activePanel) return;
 
-        // Toggle class to enable register-only scrolling in CSS
-        document.body.classList.toggle('is-register', this.currentTab === 'register');
+        // Only Register gets internal scrolling
+        const isRegister = this.currentTab === 'register';
+        document.body.classList.toggle('is-register', isRegister);
 
-        // Fit wrapper to the current panel height to avoid blank area
+        // Fit wrapper height to the active panel => remove huge empty space on Login/Guest
         requestAnimationFrame(() => {
             this.contentWrapper.style.height = activePanel.scrollHeight + 'px';
         });
@@ -122,6 +111,7 @@ class AuthTabs {
 
     // Touch/Swipe Handlers
     handleTouchStart(e) {
+        // Ignore dragging when starting on form controls (inputs, textareas, selects, buttons)
         const target = e.target;
         if (target) {
             const control = target.closest && target.closest('input, textarea, select, button, .input-wrapper');
@@ -134,7 +124,6 @@ class AuthTabs {
 
         this.ignoreDrag = false;
         this.isDragging = true;
-
         this.startX = e.type.includes('mouse')
             ? e.pageX
             : (e.touches && e.touches[0] && e.touches[0].pageX) || 0;
@@ -149,6 +138,11 @@ class AuthTabs {
         this.currentX = e.type.includes('mouse')
             ? e.pageX
             : (e.touches && e.touches[0] && e.touches[0].pageX) || this.currentX;
+
+        const diff = this.currentX - this.startX;
+
+        // Optional: Add rubber band effect while dragging
+        // (can be added later for more polish)
     }
 
     handleTouchEnd(e) {
@@ -165,11 +159,18 @@ class AuthTabs {
         this.isDragging = false;
         const diff = this.currentX - this.startX;
 
+        // Determine swipe direction
         if (Math.abs(diff) > this.threshold) {
-            if (diff > 0) this.goToPreviousTab();
-            else this.goToNextTab();
+            if (diff > 0) {
+                // Swipe right → previous tab
+                this.goToPreviousTab();
+            } else {
+                // Swipe left → next tab
+                this.goToNextTab();
+            }
         }
 
+        // Reset
         this.startX = 0;
         this.currentX = 0;
     }
@@ -191,6 +192,7 @@ class AuthTabs {
     }
 }
 
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new AuthTabs();
 });

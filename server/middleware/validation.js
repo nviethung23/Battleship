@@ -8,38 +8,41 @@ const sanitizeString = (str) => {
 
 // Validation middleware for registration
 const validateRegister = [
-    body('username')
-        .trim()
-        .isLength({ min: 3, max: 20 })
-        .withMessage('Username must be between 3 and 20 characters')
-        .matches(/^[a-zA-Z0-9_]+$/)
-        .withMessage('Username can only contain letters, numbers, and underscores')
-        .customSanitizer(sanitizeString),
-    
-    body('password')
-        .isLength({ min: 6, max: 100 })
-        .withMessage('Password must be between 6 and 100 characters')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-        .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number')
-        .optional({ nullable: true }),
-    
-    body('email')
-        .optional({ nullable: true, checkFalsy: true })
-        .isEmail()
-        .withMessage('Invalid email format')
-        .normalizeEmail()
-        .customSanitizer(sanitizeString),
-    
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ 
-                error: errors.array()[0].msg 
-            });
-        }
-        next();
+  body('username')
+    .trim()
+    .notEmpty().withMessage('Username is required')
+    .isLength({ min: 3, max: 20 }).withMessage('Username must be between 3 and 20 characters')
+    .matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores')
+    .customSanitizer(sanitizeString),
+
+  body('password')
+    .notEmpty().withMessage('Password is required')
+    .isLength({ min: 6, max: 100 }).withMessage('Password must be between 6 and 100 characters')
+    .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
+    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
+    .matches(/[0-9]/).withMessage('Password must contain at least one number'),
+
+  body('email')
+    .optional({ checkFalsy: true })
+    .isEmail().withMessage('Invalid email format')
+    .normalizeEmail()
+    .customSanitizer(sanitizeString),
+
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+        error: "Validation failed",
+        errors: errors.array().map(e => ({
+            field: e.path || e.param,
+            message: e.msg
+        }))
+        });
+    }
+    next();
     }
 ];
+
 
 // Validation middleware for login
 const validateLogin = [
@@ -56,12 +59,16 @@ const validateLogin = [
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
-                error: errors.array()[0].msg 
+            return res.status(400).json({
+            error: "Validation failed",
+            errors: errors.array().map(e => ({
+                field: e.path || e.param,
+                message: e.msg
+            }))
             });
         }
         next();
-    }
+        }
 ];
 
 // Sanitize chat messages

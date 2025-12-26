@@ -5,80 +5,86 @@ const { sanitizeString } = require('../middleware/validation');
 const { GUEST_TTL_HOURS, getGuestExpiresAt } = require('../config/guest');
 
 const register = async (req, res) => {
-    try {
-        let { username, password, email } = req.body;
+  try {
+    // ĐỪNG log password
+    console.log('[Register] Incoming:', { username: req.body?.username, hasEmail: !!req.body?.email });
 
-        // Sanitize inputs
-        username = sanitizeString(username);
-        email = email ? sanitizeString(email) : '';
+    let { username, password, email } = req.body;
 
-        // Validation (basic checks - express-validator will do detailed validation)
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password are required' });
-        }
+    username = sanitizeString(username);
+    email = email ? sanitizeString(email) : '';
 
-        if (username.length < 3 || username.length > 20) {
-            return res.status(400).json({ 
-                error: 'Username must be between 3 and 20 characters' 
-            });
-        }
+    const validationErrors = {};
 
-        if (password.length < 6 || password.length > 100) {
-            return res.status(400).json({ 
-                error: 'Password must be between 6 and 100 characters' 
-            });
-        }
+    if (!username) validationErrors.username = 'Username is required';
+    if (!password) validationErrors.password = 'Password is required';
 
-        // Validate username format (alphanumeric and underscore only)
-        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-            return res.status(400).json({ 
-                error: 'Username can only contain letters, numbers, and underscores' 
-            });
-        }
-
-        // Check if user exists
-        const existingUser = await Database.findUserByUsername(username);
-        if (existingUser) {
-            return res.status(400).json({ error: 'Username already exists' });
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Create user
-        const user = await Database.createUser({
-            username,
-            email: email || '',
-            password: hashedPassword,
-            createdAt: new Date()
-        });
-
-        // Generate token
-        const token = jwt.sign(
-            { 
-                id: user.id, 
-                username: user.username,
-                role: user.role || 'user'
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.status(201).json({
-            message: 'User registered successfully',
-            token,
-            user: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                role: user.role || 'user'
-            }
-        });
-    } catch (error) {
-        console.error('Register error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+    if (username) {
+      if (username.length < 3 || username.length > 20) {
+        validationErrors.username = 'Username must be between 3 and 20 characters';
+      } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        validationErrors.username = 'Username can only contain letters, numbers, and underscores';
+      }
     }
+
+    // Email optional nhưng nếu có thì check format
+    if (email) {
+      const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!ok) validationErrors.email = 'Invalid email format';
+    }
+
+    if (password) {
+      if (password.length < 6 || password.length > 100) {
+        validationErrors.password = 'Password must be between 6 and 100 characters';
+      } else if (!/(?=.*[a-z])/.test(password) || !/(?=.*[A-Z])/.test(password) || !/(?=.*\d)/.test(password)) {
+        validationErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+      }
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      return res.status(400).json({
+        error: "Validation failed",
+        errors: Object.entries(validationErrors).map(([field, message]) => ({ field, message }))
+      });
+    }
+
+    const existingUser = await Database.findUserByUsername(username);
+    if (existingUser) {
+      return res.status(400).json({
+        error: "Validation failed",
+        errors: [{ field: "username", message: "Username already exists" }]
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await Database.createUser({
+      username,
+      email: email || '',
+      password: hashedPassword,
+      createdAt: new Date()
+    });
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role || 'user' },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: { id: user.id, username: user.username, email: user.email, role: user.role || 'user' }
+    });
+  } catch (error) {
+    console.error('Register error:', error?.message || error);
+    if (error?.stack) console.error(error.stack);
+
+    const isDev = process.env.NODE_ENV !== 'production';
+    return res.status(500).json({ error: isDev ? (error.message || 'Internal server error') : 'Internal server error' });
+  }
 };
+
 
 const login = async (req, res) => {
     try {

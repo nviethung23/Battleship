@@ -59,8 +59,7 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    /* Disable background zoom/parallax for steadier view */
-    background-attachment: scroll;
+    background-attachment: fixed;
 }
 
 /* ĐÃ XOÁ: .lobby-bg và .character-selection-bg vì thuộc về Hub */
@@ -144,11 +143,11 @@
     align-items: start;
     /* Increased min-width to accommodate board (640px) + columns + gaps */
     /* 260px (left) + 640px (center min) + 300px (right) + 50px (gaps) = 1250px */
-    width: min(1400px, 98vw);
+    width: min(1500px, 96vw);
     max-width: 100%;
-    min-width: 1150px; /* Prevent squeezing board but allow 1366px laptops */
+    min-width: 1250px; /* Prevent squeezing board */
     margin: 0 auto;
-    padding: 110px 18px 110px 18px; /* Safe spacing for HUD cards */
+    padding: 120px 20px 120px 20px; /* Safe spacing for HUD cards */
     min-height: 100vh;
     position: relative;
     z-index: 10;
@@ -2537,9 +2536,8 @@ kbd {
 /* LEFT BANNER */
 .battle-left-banner {
     display: flex;
-    align-items: flex-start; /* stick to top */
-    justify-content: flex-start;
-    padding-top: 10px;
+    align-items: center;
+    justify-content: center;
 }
 
 .player-banner-card {
@@ -2556,10 +2554,6 @@ kbd {
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
     width: 100%;
     max-width: 200px;
-    min-width: 180px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
 }
 
 .banner-name {
@@ -2618,40 +2612,26 @@ kbd {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    align-items: center; /* center tabs and grids together */
-    padding: 16px 18px;
-    background: radial-gradient(circle at 30% 30%, rgba(90, 140, 200, 0.12), transparent 45%),
-        linear-gradient(135deg, rgba(12, 25, 48, 0.65), rgba(10, 18, 35, 0.75));
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), inset 0 0 30px rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
 }
 
 /* Battle Tabs */
 .battle-tabs {
-    display: grid;
-    /* Match actual frame widths: mini-frame (≈220 grid + padding/border) and main-frame (≈510 grid + padding/border) */
-    grid-template-columns: 248px 542px;
-    column-gap: 40px; /* same gap as grids */
+    display: flex;
     justify-content: center;
-    width: max-content;
-    margin: 0 auto;
+    gap: 20px;
 }
 
 .battle-tab {
-    padding: 8px 20px;
+    padding: 12px 30px;
     background: rgba(20, 40, 80, 0.8);
     border: 2px solid rgba(100, 150, 255, 0.3);
     border-radius: 10px;
     font-family: 'Black Ops One', sans-serif;
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: rgba(255, 255, 255, 0.7);
     text-transform: uppercase;
     letter-spacing: 2px;
     transition: all 0.3s ease;
-    text-align: center;
-    width: 100%; /* fill grid column to line up with grids */
 }
 
 .battle-tab.active {
@@ -2668,8 +2648,6 @@ kbd {
     justify-content: center;
     gap: 40px;
     flex: 1;
-    width: max-content;
-    margin: 0 auto; /* center both grids as one block */
 }
 
 /* Mini Grid Section */
@@ -2679,16 +2657,13 @@ kbd {
 }
 
 .grid-frame {
-    background: linear-gradient(145deg, rgba(15, 35, 70, 0.65), rgba(10, 20, 40, 0.7));
-    border-radius: 12px;
-    padding: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), inset 0 0 25px rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(6px);
+    background: rgba(10, 30, 60, 0.6);
+    border-radius: 10px;
+    padding: 10px;
 }
 
 .mini-frame {
-    border: 2px solid rgba(100, 150, 255, 0.45);
+    border: 2px solid rgba(100, 150, 255, 0.4);
 }
 
 .main-frame {
@@ -2847,93 +2822,12 @@ kbd {
     border-radius: 50%;
 }
 
-.battle-grid .cell.ship-sunk {
-    animation: sunkPulse 0.9s ease;
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.85);
-}
-
 /* RIGHT PANEL */
 .battle-right-panel {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    align-items: flex-end;
-    padding-top: 10px;
-    padding-right: 20px; /* keep clear of settings gear */
-}
-
-.shot-history {
-    width: 100%;
-    max-width: 260px;
-    background: linear-gradient(145deg, rgba(12, 25, 48, 0.92), rgba(8, 16, 32, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35), inset 0 0 20px rgba(255, 255, 255, 0.04);
-    padding: 12px;
-    backdrop-filter: blur(8px);
-}
-
-.shot-history-title {
-    font-family: 'Black Ops One', sans-serif;
-    font-size: 0.95rem;
-    color: #fff;
-    margin-bottom: 8px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-.shot-history-list {
-    max-height: 260px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-.shot-history-list::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-}
-
-.shot-history-item {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 8px 10px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    font-size: 0.88rem;
-    color: #dbeafe;
-}
-
-.shot-history-item.you {
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.18), rgba(59, 130, 246, 0.2));
-    border-color: rgba(99, 102, 241, 0.4);
-    color: #e0e7ff;
-}
-
-.shot-history-item.opp {
-    background: linear-gradient(135deg, rgba(255, 64, 64, 0.12), rgba(180, 30, 30, 0.14));
-    border-color: rgba(255, 82, 82, 0.35);
-}
-
-.shot-cell {
-    font-family: 'Be Vietnam Pro', sans-serif;
-    font-weight: 600;
-}
-
-.shot-result {
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-.shot-result.hit {
-    color: #4ade80;
-}
-.shot-result.miss {
-    color: #60a5fa;
+    align-items: center;
 }
 
 /* Timer Box */
@@ -2944,7 +2838,6 @@ kbd {
     padding: 20px;
     text-align: center;
     box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4);
-    margin-right: 8px; /* nudge left from gear */
 }
 
 .timer-circle {
@@ -3021,15 +2914,11 @@ kbd {
     background: rgba(0, 0, 0, 0.2);
     border-radius: 6px;
     font-size: 0.75rem;
-    transition: opacity 0.3s ease, transform 0.3s ease, filter 0.3s ease;
 }
 
 .tracker-ship.sunk {
     opacity: 0.4;
     text-decoration: line-through;
-    filter: grayscale(1);
-    transform: translateX(4px);
-    animation: trackerSunk 0.6s ease;
 }
 
 .ship-icon {
@@ -3050,12 +2939,6 @@ kbd {
     color: #ef4444;
 }
 
-@keyframes trackerSunk {
-    0% { opacity: 1; transform: translateX(0); }
-    50% { opacity: 0.65; transform: translateX(6px); }
-    100% { opacity: 0.4; transform: translateX(4px); }
-}
-
 /* Opponent Card */
 .opponent-card {
     background: linear-gradient(180deg, rgba(80, 40, 20, 0.9), rgba(50, 25, 10, 0.95));
@@ -3064,10 +2947,6 @@ kbd {
     padding: 15px;
     text-align: center;
     box-shadow: 0 5px 25px rgba(255, 122, 47, 0.3);
-    min-width: 180px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
 }
 
 .opponent-avatar {
@@ -3444,44 +3323,6 @@ kbd {
     transform: rotate(45deg);
 }
 
-.settings-menu {
-    position: fixed;
-    top: 70px;
-    right: 20px;
-    background: linear-gradient(145deg, rgba(12, 25, 48, 0.92), rgba(8, 16, 32, 0.95));
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35), inset 0 0 20px rgba(255, 255, 255, 0.04);
-    padding: 8px;
-    display: none;
-    z-index: 99;
-    backdrop-filter: blur(8px);
-    min-width: 180px;
-}
-
-.settings-menu.open {
-    display: block;
-}
-
-.settings-item {
-    width: 100%;
-    background: linear-gradient(135deg, rgba(255, 122, 47, 0.9), rgba(255, 90, 20, 0.9));
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-family: 'Black Ops One', sans-serif;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-transform: uppercase;
-}
-
-.settings-item:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(255, 122, 47, 0.35);
-}
-
 /* Responsive */
 @media (max-width: 1200px) {
     .battle-layout {
@@ -3788,12 +3629,6 @@ kbd {
     100% { background: rgba(100, 150, 255, 0.5); transform: scale(1); }
 }
 
-@keyframes sunkPulse {
-    0% { transform: scale(1); }
-    40% { transform: scale(1.08); }
-    100% { transform: scale(1); }
-}
-
 /* Explosion effect on hit */
 .explosion-effect {
     position: absolute;
@@ -3953,173 +3788,8 @@ kbd {
     50% { transform: scale(1.1); }
 }
 
-/* =========================================================
-   GLOBAL SCROLL BEHAVIOR (match hub.css)
-   Allow scroll everywhere but hide scrollbar visuals
-========================================================= */
-html, body {
-    height: auto;
-    min-height: 100svh;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;      /* Firefox */
-    -ms-overflow-style: none;   /* Legacy Edge */
-}
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-}
-
-/* Any scrollable game container */
-.game-container,
-.screen,
-.placement-wrapper-hud,
-.deploy-layout-grid,
-.battle-layout,
-.battle-grids,
-.battle-right-panel,
-.battle-left-banner {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-.game-container::-webkit-scrollbar,
-.screen::-webkit-scrollbar,
-.placement-wrapper-hud::-webkit-scrollbar,
-.deploy-layout-grid::-webkit-scrollbar,
-.battle-layout::-webkit-scrollbar,
-.battle-grids::-webkit-scrollbar,
-.battle-right-panel::-webkit-scrollbar,
-.battle-left-banner::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-}
 .reconnecting-message {
     font-size: 1rem;
     color: rgba(255, 255, 255, 0.7);
     font-style: italic;
-}
-
-/* =========================================================
-   DEPLOY RESPONSIVE FIX (1366x768)
-
-/* Make placement screen scrollable (it was fixed 100vh, content gets cut) */
-.placement-wrapper-hud{
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.placement-wrapper-hud::-webkit-scrollbar{
-  width: 0;
-  height: 0;
-}
-
-/* 1366x768 and similar heights */
-@media (max-height: 820px){
-  .deploy-layout-grid{
-    padding: 80px 14px 36px 14px;  /* was 120/120 -> too tall */
-    gap: 18px;                     /* tighter */
-    min-height: auto;
-  }
-
-  /* Reduce the big offsets that push columns down */
-  .deploy-left-column{
-    top: 160px;
-    margin-top: 90px;
-  }
-  .deploy-right-column{
-    top: 80px;
-  }
-
-  /* Slightly smaller board cells so everything fits better */
-  .board-placement{
-    grid-template-columns: repeat(10, 48px);
-    grid-template-rows: repeat(10, 48px);
-    min-width: 480px; /* was 520 */
-  }
-}
-
-@media (max-height: 760px){
-  .deploy-layout-grid{
-    padding: 64px 12px 28px 12px;
-    gap: 14px;
-  }
-
-  .deploy-left-column{
-    top: 140px;
-    margin-top: 70px;
-  }
-  .deploy-right-column{
-    top: 64px;
-  }
-
-  .board-placement{
-    grid-template-columns: repeat(10, 44px);
-    grid-template-rows: repeat(10, 44px);
-    min-width: 440px;
-  }
-}
-
-/* Laptop 14\" and below: allow scrolling to Ready button, hide scrollbar */
-@media (max-height: 850px), (max-width: 1366px){
-  .placement-wrapper-hud{
-    height: auto;
-    min-height: 100vh;
-    padding-bottom: 90px;
-    overflow-y: auto;
-    scrollbar-width: none;
-  }
-  .placement-wrapper-hud::-webkit-scrollbar{
-    width: 0;
-    height: 0;
-  }
-  .deploy-layout-grid{
-    min-height: auto;
-    padding: 72px 14px 48px 14px;
-  }
-  .deploy-left-column,
-  .deploy-right-column{
-    position: static;
-    top: auto;
-    margin-top: 16px;
-  }
-  .deploy-controls-panel{
-    position: relative;
-  }
-}
-
-/* Also help narrower 1366 widths if user uses zoom/125% scale */
-@media (max-width: 1400px){
-  .deploy-layout-grid{
-    grid-template-columns: 230px 1fr 260px;
-    width: 100%;
-    min-width: auto;
-    padding: 88px 14px 70px 14px;
-    gap: 18px;
-  }
-  .deploy-center-column{
-    min-width: 520px;
-  }
-  .board-placement{
-    grid-template-columns: repeat(10, 48px);
-    grid-template-rows: repeat(10, 48px);
-    min-width: 480px;
-  }
-}
-
-@media (max-width: 1280px){
-  .deploy-layout-grid{
-    padding: 70px 12px 60px 12px;
-    gap: 14px;
-  }
-  .board-placement{
-    grid-template-columns: repeat(10, 44px);
-    grid-template-rows: repeat(10, 44px);
-    min-width: 440px;
-  }
 }

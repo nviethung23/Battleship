@@ -130,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('[Game] ❌ No room code found! Cannot join room.');
         console.error('[Game] SessionStorage:', BattleshipState.getRoomCode());
         console.error('[Game] LocalStorage gameRoomData:', localStorage.getItem('gameRoomData'));
-        SocketShared.showNotification('Lỗi: Không tìm thấy phòng!', 'error');
     }
 
     // **CHECK IF GAME WAS IN PROGRESS (RECONNECT LOGIC)**
@@ -177,6 +176,29 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         // No saved state - show placement screen normally
         showPlacementScreen();
+    }
+});
+
+// SETTINGS MENU HANDLER
+document.addEventListener('DOMContentLoaded', () => {
+    const settingsBtn = document.getElementById('btnSettings');
+    const settingsMenu = document.getElementById('settingsMenu');
+    const exitBtn = document.getElementById('exitToHubBtn');
+
+    if (settingsBtn && settingsMenu) {
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsMenu.classList.toggle('open');
+        });
+
+        document.addEventListener('click', () => settingsMenu.classList.remove('open'));
+        settingsMenu.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    if (exitBtn) {
+        exitBtn.addEventListener('click', () => {
+            backToHub();
+        });
     }
 });
 
@@ -273,9 +295,9 @@ function setupEventListeners(socket) {
                     window.ShipDock.lockDock();
                 }
                 
-                SocketShared.showNotification('✓ Đã sẵn sàng! Đang chờ đối thủ...', 'success');
-                
-                console.log('[Game] ✅ Player ready state updated');
+                // Ready state already visible in UI; skip toast
+
+         
             } else {
                 SocketShared.showNotification('⚠️ Vui lòng đặt tất cả 5 tàu trước khi sẵn sàng!', 'warning');
             }
@@ -510,6 +532,8 @@ function handleRejoinGame(data) {
     const myUserId = BattleshipState.getUserId();
     gameState.isMyTurn = data.currentTurn === myUserId;
     gameState.gameStarted = true;
+    resetShipTracker();
+    nextTurnNotificationDelay = 0;
     
     // Hide all screens
     hideAllScreens();
@@ -809,7 +833,6 @@ function loadDeployCharacterInfo() {
     try {
         const gameRoomData = localStorage.getItem('gameRoomData');
         if (!gameRoomData) {
-            console.warn('[Game] No room data found, using defaults');
             return;
         }
         
@@ -930,12 +953,12 @@ function updatePlayerReadyStatus(data) {
                     oppStatus.innerHTML = '<span class="status-icon">✓</span><span>Ready!</span>';
                     oppStatus.className = 'character-status status-active';
                     
-                    console.log('[Game] 👤 Opponent is READY!');
+                    console.log('[Game] dY` Opponent is READY!');
                     
                     // Check if both players are ready
                     if (myReady && opponentReady) {
-                        console.log('[Game] ⚔️ BOTH PLAYERS READY! Waiting for server to start game...');
-                        SocketShared.showNotification('🎮 Cả hai đã sẵn sàng! Trận chiến sắp bắt đầu...', 'success');
+                        console.log('[Game] �s"�,? BOTH PLAYERS READY! Waiting for server to start game...');
+                        // Both ready - already visible in UI
                     }
                 } else {
                     // Opponent is still deploying
@@ -1635,6 +1658,11 @@ function startGame(data) {
     
     // Mark game as started
     gameState.gameStarted = true;
+    // Reset per-match state to avoid stale sunk markers
+    gameState.myAttacks = [];
+    gameState.enemyAttacks = [];
+    resetShipTracker();
+    nextTurnNotificationDelay = 0;
     
     // **SAVE BATTLE STATE for reconnection**
     saveBattleState(data);
@@ -1693,7 +1721,7 @@ function handleTurnContinue(data) {
     console.log('[Game] Is my turn:', isMyTurn);
     
     gameState.isMyTurn = isMyTurn;
-    showTurnNotification(isMyTurn);
+    showTurnNotification(isMyTurn, consumeTurnNotificationDelay());
     
     // Update turn tab
     updateTurnTab(isMyTurn);
@@ -1779,16 +1807,29 @@ function hideReconnectingOverlay() {
 // ============ BATTLE SCREEN FUNCTIONS ============
 // (Previously in battle.js - now consolidated here)
 
+function normalizeCharacterId(charId) {
+    if (typeof charId === 'string') {
+        if (charId.startsWith('character')) return charId;
+        const num = parseInt(charId, 10);
+        if (!Number.isNaN(num)) return `character${num + 1}`;
+    }
+    if (typeof charId === 'number') {
+        return `character${charId + 1}`;
+    }
+    return 'character1';
+}
+
+function getCharacterAvatarPath(charId) {
+    const normalized = normalizeCharacterId(charId);
+    return `images/characters/${normalized}/avatar-large.png`;
+}
+
 function initBattle(gameData) {
     console.log('[Game] 🎮 initBattle() called with data:', gameData);
     
     // Store initial turn state
     const myUserId = BattleshipState.getUserId();
     gameState.isMyTurn = gameData.currentTurn === myUserId;
-    
-    console.log('[Game] My userId:', myUserId);
-    console.log('[Game] currentTurn from server:', gameData.currentTurn);
-    console.log('[Game] Is my turn:', gameState.isMyTurn);
     
     // Initialize timer display to 60 seconds
     const timerElement = document.getElementById('battleTimer');
@@ -1797,12 +1838,26 @@ function initBattle(gameData) {
         timerElement.classList.remove('warning', 'danger');
     }
     
-    // Get character info from localStorage
-    const myCharData = JSON.parse(localStorage.getItem('myCharacterData') || '{}');
-    const oppCharData = JSON.parse(localStorage.getItem('opponentCharacterData') || '{}');
-    
-    console.log('[Game] My character:', myCharData);
-    console.log('[Game] Opponent character:', oppCharData);
+    // Build character info from server payload
+    const myPlayer = gameData.player1?.userId === myUserId ? gameData.player1 : gameData.player2;
+    const oppPlayer = gameData.player1?.userId === myUserId ? gameData.player2 : gameData.player1;
+    const myCharId = normalizeCharacterId(myPlayer?.characterId);
+    const oppCharId = normalizeCharacterId(oppPlayer?.characterId);
+
+    const myCharData = {
+        name: myPlayer?.username || 'You',
+        avatar: getCharacterAvatarPath(myCharId),
+        characterId: myCharId
+    };
+    const oppCharData = {
+        name: oppPlayer?.username || 'Opponent',
+        avatar: getCharacterAvatarPath(oppCharId),
+        characterId: oppCharId
+    };
+
+    // Persist for reuse (rejoin, other screens)
+    localStorage.setItem('myCharacterData', JSON.stringify(myCharData));
+    localStorage.setItem('opponentCharacterData', JSON.stringify(oppCharData));
     
     // Render battle UI
     renderBattleUI(myCharData, oppCharData, gameData);
@@ -1823,7 +1878,10 @@ function renderBattleUI(myChar, oppChar, gameData) {
     const leftPlayerName = document.getElementById('leftPlayerName');
     const leftPlayerAvatar = document.getElementById('leftPlayerAvatar');
     
-    if (leftPlayerName) leftPlayerName.textContent = myChar.name || 'You';
+    const displayMyName = myChar.name || 'You';
+    const shortMyName = displayMyName.length > 14 ? `${displayMyName.slice(0, 12)}…` : displayMyName;
+
+    if (leftPlayerName) leftPlayerName.textContent = shortMyName;
     if (leftPlayerAvatar && myChar.avatar) {
         leftPlayerAvatar.src = myChar.avatar;
     }
@@ -1832,7 +1890,11 @@ function renderBattleUI(myChar, oppChar, gameData) {
     const opponentName = document.getElementById('opponentName');
     const opponentAvatar = document.getElementById('opponentAvatar');
     
-    if (opponentName) opponentName.textContent = oppChar.name || 'Opponent';
+    // Shorten long guest IDs for better fit
+    const displayOppName = oppChar.name || 'Opponent';
+    const shortOppName = displayOppName.length > 14 ? `${displayOppName.slice(0, 12)}…` : displayOppName;
+
+    if (opponentName) opponentName.textContent = shortOppName;
     if (opponentAvatar && oppChar.avatar) {
         opponentAvatar.src = oppChar.avatar;
     }
@@ -2002,25 +2064,8 @@ function startAttackAnimation(cell, row, col, roomCode) {
 
 // Show targeting overlay with crosshair effect
 function showTargetingOverlay(row, col) {
-    // Remove existing overlay
-    hideTargetingOverlay();
-    
-    const overlay = document.createElement('div');
-    overlay.id = 'targetingOverlay';
-    overlay.className = 'targeting-overlay';
-    overlay.innerHTML = `
-        <div class="targeting-content">
-            <div class="targeting-crosshair">
-                <div class="crosshair-line horizontal"></div>
-                <div class="crosshair-line vertical"></div>
-                <div class="crosshair-circle"></div>
-            </div>
-            <div class="targeting-coords">${String.fromCharCode(65 + row)}${col + 1}</div>
-            <div class="targeting-text">LOCKING TARGET...</div>
-        </div>
-    `;
-    
-    document.getElementById('battleScreen').appendChild(overlay);
+    // Disabled to keep background static during firing
+    return;
 }
 
 function hideTargetingOverlay() {
@@ -2030,12 +2075,36 @@ function hideTargetingOverlay() {
     }
 }
 
+function appendShotHistory(isMyAttack, row, col, hit) {
+    const list = document.getElementById('shotHistoryList');
+    if (!list) return;
+
+    const item = document.createElement('div');
+    item.className = `shot-history-item ${isMyAttack ? 'you' : 'opp'}`;
+
+    const who = isMyAttack ? 'You' : 'Opponent';
+    const cellLabel = `${String.fromCharCode(65 + row)}${col + 1}`;
+
+    item.innerHTML = `
+        <span class="shot-cell">${who}: ${cellLabel}</span>
+        <span class="shot-result ${hit ? 'hit' : 'miss'}">${hit ? 'HIT' : 'MISS'}</span>
+    `;
+
+    list.appendChild(item);
+    list.scrollTop = list.scrollHeight;
+
+    if (list.children.length > 30) {
+        list.removeChild(list.firstChild);
+    }
+}
+
 // Battle event handlers (called from socket handlers)
 function handleBattleAttackResult(data) {
     console.log('[Game] 💥 Attack result:', data);
     
     const myUserId = BattleshipState.getUserId();
     const isMyAttack = data.attackerId === myUserId;
+    const sunkShipName = data.shipName || data.shipSunk;
     
     console.log('[Game] My userId:', myUserId);
     console.log('[Game] Attacker ID:', data.attackerId);
@@ -2058,24 +2127,26 @@ function handleBattleAttackResult(data) {
         
         if (data.hit) {
             showHitStamp(); // Show HIT! animation
-            SocketShared.showNotification('Trúng mục tiêu! 🎯', 'success');
             
             // Check if ship sunk
-            if (data.sunk && data.shipName) {
+            if (data.sunk) {
                 setTimeout(() => {
-                    showSunkStamp(data.shipName);
-                    updateShipTracker(data.shipName, true);
+                    if (sunkShipName) {
+                        showSunkStamp(sunkShipName);
+                        updateShipTracker(sunkShipName, true);
+                    }
+                    animateSunkShipCells(data.shipCells, '#battleEnemyBoard');
                 }, 800); // Show after HIT stamp
-                SocketShared.showNotification(`Đánh chìm ${data.shipName}! 🚢💥`, 'success');
+                nextTurnNotificationDelay = SUNK_ANIM_BUFFER;
+            } else {
+                nextTurnNotificationDelay = HIT_ANIM_BUFFER;
             }
         } else {
             showMissStamp(); // Show MISS stamp
-            SocketShared.showNotification('Trượt! 💦', 'info');
+            nextTurnNotificationDelay = HIT_ANIM_BUFFER;
         }
+        appendShotHistory(true, data.row, data.col, data.hit);
     } else {
-        // Enemy attacked ME - update my board (mini grid)
-        console.log('[Game] 🎯 Enemy attacking my fleet at', data.row, data.col);
-        
         const cell = document.querySelector(`#battleMyBoard .cell[data-row="${data.row}"][data-col="${data.col}"]`);
         if (cell) {
             // Add hit/miss class
@@ -2100,9 +2171,19 @@ function handleBattleAttackResult(data) {
             const hits = document.querySelectorAll('#battleMyBoard .cell.hit').length;
             updateFleetHealth(totalCells - hits, totalCells);
             
-            // Show notification that I was hit
-            SocketShared.showNotification('Tàu của bạn bị trúng đạn! 💥', 'error');
+            if (data.sunk) {
+                if (sunkShipName) {
+                    animateSunkShipCells(data.shipCells, '#battleMyBoard');
+                }
+                nextTurnNotificationDelay = SUNK_ANIM_BUFFER;
+            } else {
+                nextTurnNotificationDelay = HIT_ANIM_BUFFER;
+            }
+        } else {
+            nextTurnNotificationDelay = HIT_ANIM_BUFFER;
         }
+
+        appendShotHistory(false, data.row, data.col, data.hit);
     }
 }
 
@@ -2122,6 +2203,26 @@ function showSplashEffect(cell) {
     cell.appendChild(effect);
     
     setTimeout(() => effect.remove(), 500);
+}
+
+// Animate all cells belonging to a sunk ship
+function animateSunkShipCells(shipCells, boardSelector) {
+    if (!Array.isArray(shipCells) || !boardSelector) return;
+    
+    shipCells.forEach(({ row, col }, index) => {
+        const delay = index * 120;
+        setTimeout(() => {
+            const targetCell = document.querySelector(`${boardSelector} .cell[data-row="${row}"][data-col="${col}"]`);
+            if (!targetCell) return;
+            
+            targetCell.classList.add('ship-sunk');
+            showExplosionEffect(targetCell);
+            
+            setTimeout(() => {
+                targetCell.classList.remove('ship-sunk');
+            }, 1400);
+        }, delay);
+    });
 }
 
 // Show MISS stamp
@@ -2148,7 +2249,7 @@ function showSunkStamp(shipName) {
 // Kept for backward compatibility if server sends 'under_attack' event separately
 function handleBattleUnderAttack(data) {
     console.log('[Game] 🎯 Under attack (legacy handler):', data);
-    // This is now handled in handleBattleAttackResult when isMyAttack === false
+    // legacy handler (kept for older events)
     // But keeping this in case server sends separate event
     const cell = document.querySelector(`#battleMyBoard .cell[data-row="${data.row}"][data-col="${data.col}"]`);
     if (cell) {
@@ -2162,8 +2263,9 @@ function handleBattleUnderAttack(data) {
         const hits = document.querySelectorAll('#battleMyBoard .cell.hit').length;
         updateFleetHealth(totalCells - hits, totalCells);
     }
-}
 
+    appendShotHistory(false, data.row, data.col, data.hit);
+}
 function handleBattleTurnChanged(data) {
     console.log('[Game] 🔄 Turn changed:', data);
     
@@ -2177,7 +2279,7 @@ function handleBattleTurnChanged(data) {
     console.log('[Game] Is my turn:', isMyTurn);
     
     gameState.isMyTurn = isMyTurn;
-    showTurnNotification(isMyTurn);
+    showTurnNotification(isMyTurn, consumeTurnNotificationDelay());
     
     // Update turn tab
     updateTurnTab(isMyTurn);
@@ -2223,18 +2325,36 @@ function handleBattleTimerUpdate(data) {
     }
 }
 
-function showTurnNotification(isMyTurn) {
+const TURN_NOTIFICATION_DELAY = 1200;
+const HIT_ANIM_BUFFER = 900;
+const SUNK_ANIM_BUFFER = 2200;
+let turnNotificationTimeout = null;
+let nextTurnNotificationDelay = 0;
+
+function consumeTurnNotificationDelay() {
+    const delay = Math.max(TURN_NOTIFICATION_DELAY, nextTurnNotificationDelay);
+    nextTurnNotificationDelay = 0;
+    return delay;
+}
+
+function showTurnNotification(isMyTurn, delay = 0) {
     const transition = document.getElementById('turnTransitionBattle');
     const title = document.getElementById('transitionTitleBattle');
     
-    if (transition && title) {
-        title.textContent = isMyTurn ? 'YOUR TURN' : 'ENEMY TURN';
-        transition.style.display = 'flex';
-        
-        setTimeout(() => {
-            transition.style.display = 'none';
-        }, 2000);
+    if (turnNotificationTimeout) {
+        clearTimeout(turnNotificationTimeout);
     }
+    
+    turnNotificationTimeout = setTimeout(() => {
+        if (transition && title) {
+            title.textContent = isMyTurn ? 'YOUR TURN' : 'ENEMY TURN';
+            transition.style.display = 'flex';
+            
+            setTimeout(() => {
+                transition.style.display = 'none';
+            }, 2000);
+        }
+    }, Math.max(0, delay));
 }
 
 function handleBattleGameOver(data) {
@@ -2414,32 +2534,13 @@ function setupBattleChat() {
         
         if (gameState.socket) {
             const roomCode = BattleshipState.getRoomCode();
-            const timestamp = Date.now();
-            
-            // Track this message to avoid duplicate display
-            sentMessageIds.add(timestamp);
-            
-            // Display locally immediately
-            addBattleChatMessage({
-                userId: BattleshipState.getUserId(),
-                username: BattleshipState.getUsername(),
-                message: message,
-                timestamp: timestamp
-            }, true); // isLocalSend = true
-            
-            // Send to server
             gameState.socket.emit('chat_message', {
                 roomId: roomCode,
                 message: message,
-                timestamp: timestamp
+                timestamp: Date.now()
             });
             
             input.value = '';
-            
-            // Clean up old tracked messages after 10 seconds
-            setTimeout(() => {
-                sentMessageIds.delete(timestamp);
-            }, 10000);
         }
     });
     
@@ -2575,6 +2676,10 @@ function updateShipTracker(shipName, isSunk) {
     }
 }
 
+function resetShipTracker() {
+    document.querySelectorAll('.tracker-ship').forEach(ship => ship.classList.remove('sunk'));
+}
+
 // ============ FLEET HEALTH UPDATE ============
 function updateFleetHealth(remainingHits, totalHits) {
     const healthFill = document.getElementById('myFleetHealth');
@@ -2592,3 +2697,5 @@ function updateFleetHealth(remainingHits, totalHits) {
         healthFill.style.background = 'linear-gradient(90deg, #4ade80, #22c55e)';
     }
 }
+
+

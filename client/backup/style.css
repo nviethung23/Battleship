@@ -16,6 +16,9 @@ body {
     background: url('../images/backgrounds/index.png') center/cover no-repeat fixed;
     min-height: 100vh;
     position: relative;
+    
+    align-items: center;
+    justify-content: center;
     color: #1d3557;
 }
 
@@ -35,9 +38,10 @@ body::before {
 .container {
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     min-height: 100vh;
+    min-height: 100svh; 
     padding: 40px 20px;
 }
 
@@ -46,13 +50,13 @@ body::before {
     background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: 20px;
+    border-radius: 24px;
     box-shadow: 
         0 8px 32px rgba(0, 0, 0, 0.3),
         0 4px 16px rgba(69, 123, 157, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.4);
-    max-width: 440px;
+    max-width: 450px;
     width: 100%;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -85,7 +89,7 @@ body::before {
     background: linear-gradient(135deg, rgba(10, 25, 47, 0.95) 0%, rgba(29, 53, 87, 0.9) 50%, rgba(69, 123, 157, 0.85) 100%);
     color: white;
     position: relative;
-    overflow: visible;
+    overflow: hidden;
 }
 
 .auth-header::before {
@@ -103,6 +107,7 @@ body::before {
         rgba(255, 255, 255, 0.03) 51px
     );
     z-index: 0;
+    opacity: 0.35;
 }
 
 /* Logo HERO - Phóng to hơn */
@@ -202,8 +207,8 @@ body::before {
    ======================================== */
 
 .auth-tabs {
-    padding: 0;
-}
+    padding-bottom: 8px;
+}   
 
 /* Tab Navigation - Premium Pill Container */
 .tab-nav {
@@ -287,8 +292,11 @@ body::before {
 
 /* Tab Content */
 .tab-content-wrapper {
-    overflow: hidden;
+    /* Keep horizontal overflow hidden for sliding panels; height is controlled by JS */
+    overflow-x: hidden;
+    overflow-y: hidden;
     position: relative;
+    transition: height 0.25s ease;
 }
 
 .tab-panels {
@@ -310,11 +318,10 @@ body::before {
 }
 
 .tab-panel {
-    flex: 0 0 33.333%;
-    padding: 26px 24px 20px;
-    box-sizing: border-box;
+    width: 33.333%;
+    padding: 24px 20px 18px;
     opacity: 0;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.3s ease;
 }
 
 .tab-panel.active {
@@ -1303,77 +1310,4 @@ body::before {
         /* Smooth internal scrolling if needed */
         -webkit-overflow-scrolling: touch;
     }
-}
-
-
-html, body{ height: 100%; }
-
-body{
-  overflow: hidden;      /* no page scrollbar gutter */
-  overflow-x: hidden;
-}
-
-/* Always center the card */
-.container{
-  min-height: 100vh;
-  min-height: 100svh;
-  justify-content: center;
-  overflow: hidden;
-}
-
-/* Do not let older media queries force card scrolling */
-.auth-box{
-  overflow: hidden !important;
-  max-height: none !important;
-}
-
-/* Slider wrapper: height controlled by JS */
-.tab-content-wrapper{
-  overflow-x: hidden;
-  overflow-y: hidden;
-  transition: height .25s ease;
-}
-
-/* IMPORTANT: stop flex stretch that causes blank space */
-.tab-panels{
-  align-items: flex-start; /* each panel keeps its own natural height */
-}
-
-/* Safety: ensure panel doesn't stretch */
-.tab-panel{
-  align-self: flex-start;
-}
-
-/* Register-only internal scroll (Facebook-like) */
-body.is-register .tab-panel.active{
-  max-height: min(560px, calc(100svh - 320px));
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  padding-right: 10px;
-}
-
-/* Hide scrollbar but keep scroll */
-body.is-register .tab-panel.active{
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-body.is-register .tab-panel.active::-webkit-scrollbar{
-  width: 0;
-  height: 0;
-}
-
-/* Small laptop heights: tighter header so Register fits better */
-@media (max-height: 768px){
-  .container{ padding: 14px 18px; }
-  .auth-header{ padding: 30px 20px 20px; }
-  .auth-header .game-logo{ width: 100px; }
-  .auth-header h1{ font-size: 30px; }
-}
-
-/* Very small heights fallback */
-@media (max-height: 650px){
-  body.is-register .tab-panel.active{
-    max-height: calc(100svh - 260px);
-  }
 }

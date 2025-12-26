@@ -97,7 +97,8 @@ class GameLogic {
             col,
             shipName: cellValue,
             sunk: false,
-            shipSunk: null
+            shipSunk: null,
+            shipCells: null
         };
 
         if (isHit) {
@@ -105,6 +106,9 @@ class GameLogic {
             const ship = ships.find(s => s.name === cellValue);
             if (ship) {
                 ship.hits = (ship.hits || 0) + 1;
+                if (Array.isArray(ship.cells)) {
+                    result.shipCells = ship.cells.map(c => ({ row: c.row, col: c.col }));
+                }
                 if (ship.hits === ship.cells.length) {
                     result.sunk = true;
                     result.shipSunk = ship.name;

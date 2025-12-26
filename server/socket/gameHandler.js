@@ -797,7 +797,7 @@ class GameHandler {
         }
 
         // Update attacked cells
-        defender.attackedCells.push({ row, col, hit: result.hit });
+        defender.attackedCells.push({ row, col, hit: result.hit, shipName: result.shipName });
 
         // Send result to both players
         this.io.to(actualRoomId).emit('attack_result', {
@@ -809,7 +809,9 @@ class GameHandler {
             col,
             hit: result.hit,
             sunk: result.sunk,
-            shipSunk: result.shipSunk
+            shipSunk: result.shipSunk,
+            shipName: result.shipName,
+            shipCells: result.shipCells
         });
 
         // Check game over
@@ -1848,20 +1850,82 @@ class GameHandler {
     }
     
     generateRandomShips() {
-        // TODO: Implement random ship placement logic
-        // For now, return placeholder
-        const ships = SHIPS.map(ship => ({
-            name: ship.name,
-            size: ship.size,
-            positions: [] // Will be filled with random positions
-        }));
-        return ships;
+        // Place all ships randomly on a fresh board so each ship has a valid cells array
+        const board = GameLogic.createEmptyBoard();
+        const placedShips = [];
+
+        for (const shipConfig of SHIPS) {
+            let placed = false;
+            let attempts = 0;
+
+            // Try random positions first
+            while (!placed && attempts < 100) {
+                attempts++;
+                const isHorizontal = Math.random() < 0.5;
+                const row = Math.floor(Math.random() * board.length);
+                const col = Math.floor(Math.random() * board[0].length);
+
+                if (!GameLogic.canPlaceShip(board, shipConfig, row, col, isHorizontal)) {
+                    continue;
+                }
+
+                const cells = GameLogic.placeShip(board, shipConfig, row, col, isHorizontal);
+                if (cells) {
+                    placedShips.push({
+                        name: shipConfig.name,
+                        size: shipConfig.size,
+                        cells,
+                        hits: 0
+                    });
+                    placed = true;
+                }
+            }
+
+            // Fallback deterministic scan (should rarely be needed)
+            if (!placed) {
+                for (let r = 0; r < board.length && !placed; r++) {
+                    for (let c = 0; c < board[0].length && !placed; c++) {
+                        for (const isHorizontal of [true, false]) {
+                            if (GameLogic.canPlaceShip(board, shipConfig, r, c, isHorizontal)) {
+                                const cells = GameLogic.placeShip(board, shipConfig, r, c, isHorizontal);
+                                placedShips.push({
+                                    name: shipConfig.name,
+                                    size: shipConfig.size,
+                                    cells,
+                                    hits: 0
+                                });
+                                placed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return placedShips;
     }
     
     generateBoardFromShips(ships) {
-        // TODO: Generate 10x10 board from ship positions
-        const board = Array(10).fill(null).map(() => Array(10).fill(null));
-        // Fill board with ship names at their positions
+        const board = GameLogic.createEmptyBoard();
+
+        if (!Array.isArray(ships)) {
+            return board;
+        }
+
+        ships.forEach(ship => {
+            if (!ship || !Array.isArray(ship.cells)) {
+                return;
+            }
+
+            ship.cells.forEach(cell => {
+                const { row, col } = cell;
+                if (GameLogic.isValidCoordinate(row, col)) {
+                    board[row][col] = ship.name;
+                }
+            });
+        });
+
         return board;
     }
 }
