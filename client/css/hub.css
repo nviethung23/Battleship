@@ -196,6 +196,38 @@ body {
     gap: 16px;
 }
 
+.hub__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hub__online-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.hub__online-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 10px rgba(74, 222, 128, 0.8);
+}
+
+.hub__online-text {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #e2e8f0;
+}
+
 /* Content Grid - 2 columns for left and right */
 .hub__content-grid {
     display: grid;

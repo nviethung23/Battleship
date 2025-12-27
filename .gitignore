@@ -4,4 +4,13 @@ node_modules/
 .DS_Store
 data/users.json
 data/games.json
+# SSH / TLS keys
+*.pem
+*.key
+*.p12
+*.pfx
 
+# AWS / cloud credentials
+*.ppk
+*.crt
+*.cer

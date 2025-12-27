@@ -589,6 +589,9 @@ class GameHandler {
         console.log(`Room status set to: playing`);
 
         // Initialize game state
+        // Pick a random player to start
+        const startingPlayerId = Math.random() < 0.5 ? room.player1.userId : room.player2.userId;
+
         const game = {
             roomId,
             player1: {
@@ -603,7 +606,7 @@ class GameHandler {
                 attackedCells: [],
                 ships: room.player2.ships.map(s => ({ ...s, hits: 0 }))
             },
-            currentTurn: room.player1.userId,
+            currentTurn: startingPlayerId,
             startTime: Date.now(),
             turnStartTime: Date.now(),
             turnTimeLimit: 60000 // 60 seconds per turn
@@ -1623,6 +1626,7 @@ class GameHandler {
     // Join game room (when navigating to game.html)
     joinGameRoom(socket, data) {
         const { roomCode, userId, username } = data;
+        const resolvedUserId = userId || socket.userId;
         
         console.log(`[GameHandler] joinGameRoom - userId: ${userId}, roomCode: ${roomCode}`);
         
@@ -1652,6 +1656,15 @@ class GameHandler {
             return socket.emit('room:error', { message: 'Room not found' });
         }
         
+        if (resolvedUserId) {
+            if (targetRoom.player1 && targetRoom.player1.userId === resolvedUserId) {
+                targetRoom.player1.socketId = socket.id;
+            } else if (targetRoom.player2 && targetRoom.player2.userId === resolvedUserId) {
+                targetRoom.player2.socketId = socket.id;
+            }
+            playerSockets.set(resolvedUserId, socket.id);
+        }
+
         // Join the socket room
         socket.join(targetRoomId);
         console.log(`[GameHandler] ✅ Socket ${socket.id} joined room ${targetRoomId}`);

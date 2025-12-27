@@ -134,6 +134,15 @@ function setupEventListeners(socket) {
 }
 
 function setupSocketHandlers(socket) {
+    // Online count
+    socket.on('online_count', (data) => {
+        const el = document.getElementById('hubOnlineCount');
+        if (el && data?.count !== undefined) {
+            el.textContent = `${data.count} online`;
+        }
+        console.log('[Hub] online_count', data);
+    });
+
     // Queue events
     socket.on('queue:waiting', (data) => {
         console.log('[Hub] Joined queue:', data);

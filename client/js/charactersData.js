@@ -146,7 +146,18 @@ function getCharacterName(id) {
     return char?.displayName || char?.name || 'Unknown';
 }
 
+// Get ship images (per-character folder)
+function getCharacterShipsById(id) {
+    const char = getCharacterById(id);
+    const folder = char?.shipsFolder || `images/characters/${id}/ships`;
+    const ships = {};
+    SHIP_NAMES.forEach(name => {
+        ships[name] = `${folder}/${name}.png`;
+    });
+    return ships;
+}
+
 // Export for use in other files
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { CHARACTERS, getCurrentCharacter, switchCharacter, nextCharacter, prevCharacter, getCharacterById, getCharacterWinAvatar, getCharacterLoseAvatar, getCharacterName };
+    module.exports = { CHARACTERS, getCurrentCharacter, switchCharacter, nextCharacter, prevCharacter, getCharacterById, getCharacterWinAvatar, getCharacterLoseAvatar, getCharacterName, getCharacterShipsById };
 }

@@ -33,8 +33,7 @@ let gameState = {
     },
     gameStarted: false,
     timerInterval: null,
-    socket: null, // Store socket instance
-    opponentShipAssets: null
+    socket: null // Store socket instance
 };
 
 // ============ INITIALIZATION ============
@@ -1129,51 +1128,10 @@ function handleServerAutoReady(data) {
     }
     
     // Update ships on board if provided
-    if (Array.isArray(data.ships)) {
-        const board = createEmptyBoard();
-        const placedNames = [];
-
-        data.ships.forEach((ship) => {
-            if (!ship || !Array.isArray(ship.cells)) return;
-            placedNames.push(ship.name);
-
-            const rows = ship.cells.map(c => c.row);
-            const cols = ship.cells.map(c => c.col);
-            ship.startRow = ship.startRow ?? Math.min(...rows);
-            ship.startCol = ship.startCol ?? Math.min(...cols);
-            ship.isHorizontal = typeof ship.isHorizontal === 'boolean'
-                ? ship.isHorizontal
-                : (ship.cells.length > 1 ? ship.cells[0].row === ship.cells[1].row : true);
-
-            ship.cells.forEach(({ row, col }) => {
-                if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
-                    board[row][col] = ship.name;
-                }
-            });
-        });
-
+    if (data.ships) {
         gameState.myShips = data.ships;
-        gameState.myBoard = board;
-        gameState.placementMode.placedShips = placedNames;
-
-        if (window.ShipDock && typeof window.ShipDock.getShips === 'function') {
-            const dockShips = window.ShipDock.getShips();
-            dockShips.forEach(dockShip => {
-                dockShip.placed = placedNames.includes(dockShip.name);
-            });
-            if (typeof window.ShipDock.render === 'function') {
-                window.ShipDock.render();
-            }
-        }
-
-        renderPlacementBoard();
-        syncBattleMyBoardShips();
+        // TODO: Render ships on board
     }
-
-    const randomBtn = document.getElementById('randomPlaceBtn');
-    const resetBtn = document.getElementById('resetShipsBtn');
-    if (randomBtn) randomBtn.disabled = true;
-    if (resetBtn) resetBtn.disabled = true;
     
     SocketShared.showNotification(data.message || 'Hết giờ! Tàu đã được xếp tự động.', 'info');
 }
@@ -1251,60 +1209,6 @@ function buildShipMetaMap(ships = gameState.myShips) {
     return meta;
 }
 
-function normalizeShipKey(shipName) {
-    if (!shipName) return '';
-    const lower = String(shipName).toLowerCase();
-    const match = SHIPS.find(s => s.name.toLowerCase() === lower);
-    if (match) return match.name.toLowerCase();
-    return lower.replace(/\s+/g, '');
-}
-
-function getOpponentShipImage(shipName) {
-    const key = normalizeShipKey(shipName);
-    if (gameState.opponentShipAssets && gameState.opponentShipAssets[key]) {
-        const url = gameState.opponentShipAssets[key];
-        return url.startsWith('/') ? url : `/${url}`;
-    }
-
-    try {
-        const stored = JSON.parse(localStorage.getItem('opponentCharacterData') || '{}');
-        const assets = getCharacterShipsAssets(stored.characterId || stored?.characterId);
-        if (assets && assets[key]) {
-            const url = assets[key];
-            gameState.opponentShipAssets = assets;
-            return url.startsWith('/') ? url : `/${url}`;
-        }
-
-        if (stored.characterId) {
-            const charId = normalizeCharacterId(stored.characterId);
-            return `/images/characters/${charId}/ships/${key}.png`;
-        }
-    } catch (err) {
-        console.warn('[Game] Could not load opponent ship assets:', err);
-    }
-
-    const trackerImg = document.querySelector(`.tracker-ship[data-ship="${key}"] img`);
-    if (trackerImg?.src) {
-        return trackerImg.src;
-    }
-
-    return null;
-}
-
-function buildSunkShipMeta(shipCells, shipName) {
-    if (!Array.isArray(shipCells) || shipCells.length === 0) return null;
-    const rows = shipCells.map(cell => cell.row);
-    const cols = shipCells.map(cell => cell.col);
-    const isHorizontal = rows.every(r => r === rows[0]);
-    return {
-        name: shipName,
-        startRow: Math.min(...rows),
-        startCol: Math.min(...cols),
-        size: shipCells.length,
-        isHorizontal
-    };
-}
-
 function getBoardCellVar(boardEl) {
     if (!boardEl) return '';
     let value = getComputedStyle(boardEl).getPropertyValue('--cell').trim();
@@ -1365,6 +1269,7 @@ function createShipSegments(imgUrl, meta, boardEl) {
     wrapper.style.setProperty('--ship-gap-count', Math.max(0, meta.size - 1));
     wrapper.style.setProperty('--ship-image', `url("${imgUrl}")`);
     wrapper.dataset.shipSize = String(meta.size);
+
     const metrics = getBoardMetrics(boardEl);
     const cellVar = getBoardCellVar(boardEl);
     if (cellVar) {
@@ -1442,34 +1347,6 @@ function renderShipSegments(boardEl, ships = gameState.myShips) {
     });
 
     boardEl.appendChild(layer);
-}
-
-function renderSunkShipOnBoard(boardEl, shipName, shipCells, imageUrl) {
-    if (!boardEl || !Array.isArray(shipCells) || shipCells.length === 0 || !imageUrl) return;
-
-    let layer = boardEl.querySelector('.ship-sunk-layer');
-    if (!layer) {
-        layer = document.createElement('div');
-        layer.className = 'ship-sunk-layer';
-        boardEl.appendChild(layer);
-    }
-
-    const key = normalizeShipKey(shipName);
-    if (layer.querySelector(`.ship-img-wrapper[data-ship-key="${key}"]`)) {
-        return;
-    }
-
-    const meta = buildSunkShipMeta(shipCells, shipName);
-    if (!meta) return;
-
-    const wrapper = createShipSegments(imageUrl, meta, boardEl);
-    if (!wrapper) return;
-    wrapper.dataset.shipKey = key;
-    wrapper.classList.add('sunk-ship');
-
-    if (placeWrapperOnCell(boardEl, wrapper, meta.startRow, meta.startCol)) {
-        layer.appendChild(wrapper);
-    }
 }
 
 let shipSegmentResizeRaf = null;
@@ -1647,6 +1524,10 @@ function handleShipCellDragStart(e) {
     
     // Store dragged ship
     gameState.placementMode.draggedShip = shipName;
+
+    if (window.ShipDock && typeof window.ShipDock.setDragFromBoard === 'function') {
+        window.ShipDock.setDragFromBoard(shipName);
+    }
     
     // Highlight all cells of this ship
     highlightShip(shipName, true);
@@ -1658,6 +1539,10 @@ function handleShipCellDragEnd(e) {
         highlightShip(shipName, false);
     }
     gameState.placementMode.draggedShip = null;
+
+    if (window.ShipDock && typeof window.ShipDock.clearDrag === 'function') {
+        window.ShipDock.clearDrag();
+    }
 }
 
 // Handle drop event
@@ -1808,7 +1693,7 @@ function canPlaceShip(ship, row, col, isHorizontal) {
 
 // Place remaining ships randomly (for Random button with ship dock)
 function placeRemainingShipsRandomly() {
-
+    // console.log('[Placement] 🎲 Placing remaining ships randomly...');
     
     if (!window.ShipDock) {
         console.error('[Placement] ShipDock not available');
@@ -1819,6 +1704,7 @@ function placeRemainingShipsRandomly() {
     const unplacedShips = dockShips.filter(s => !s.placed);
     
     if (unplacedShips.length === 0) {
+        SocketShared.showNotification('Tất cả tàu đã được đặt!', 'info');
         return;
     }
     
@@ -2045,10 +1931,10 @@ function handleTurnContinue(data) {
     const myUserId = BattleshipState.getUserId();
     const isMyTurn = data.currentTurn === myUserId;
     
-    //console.log('[Game] 🔄 Turn continue:', data);
-    //console.log('[Game] My userId:', myUserId);
-    //console.log('[Game] Current turn:', data.currentTurn);
-    //console.log('[Game] Is my turn:', isMyTurn);
+    console.log('[Game] 🔄 Turn continue:', data);
+    console.log('[Game] My userId:', myUserId);
+    console.log('[Game] Current turn:', data.currentTurn);
+    console.log('[Game] Is my turn:', isMyTurn);
     
     gameState.isMyTurn = isMyTurn;
     showTurnNotification(isMyTurn, consumeTurnNotificationDelay());
@@ -2184,7 +2070,7 @@ function getCharacterShipsAssets(charId) {
 }
 
 function initBattle(gameData) {
-    //console.log('[Game] 🎮 initBattle() called with data:', gameData);
+    console.log('[Game] 🎮 initBattle() called with data:', gameData);
     
     // Store initial turn state
     const myUserId = BattleshipState.getUserId();
@@ -2260,7 +2146,6 @@ function renderBattleUI(myChar, oppChar, gameData) {
     
     // Update ship tracker icons to match opponent character ships
     const oppShips = getCharacterShipsAssets(oppChar.characterId);
-    gameState.opponentShipAssets = oppShips;
     document.querySelectorAll('.tracker-ship').forEach(item => {
         const type = item.dataset.ship;
         const imgSrc = oppShips[type];
@@ -2277,7 +2162,7 @@ function renderBattleUI(myChar, oppChar, gameData) {
     renderBattleMyBoard();
     renderBattleEnemyBoard();
     
-   // console.log('[Game] ✅ Battle UI rendered');
+    console.log('[Game] ✅ Battle UI rendered');
     
     // Setup chat bubble toggle
     setupChatBubble();
@@ -2325,28 +2210,6 @@ function renderBattleMyBoard() {
     renderShipSegments(el, gameState.myShips);
 }
 
-function syncBattleMyBoardShips() {
-    const board = document.getElementById('battleMyBoard');
-    if (!board) return;
-
-    const cells = board.querySelectorAll('.cell');
-    if (!cells.length) return;
-
-    cells.forEach(cell => {
-        const row = Number(cell.dataset.row);
-        const col = Number(cell.dataset.col);
-        const shipName = gameState.myBoard?.[row]?.[col];
-
-        if (shipName) {
-            cell.classList.add('ship');
-        } else {
-            cell.classList.remove('ship');
-        }
-    });
-
-    renderShipSegments(board, gameState.myShips);
-}
-
 function renderBattleEnemyBoard() {
     const el = document.getElementById('battleEnemyBoard');
     if (!el) {
@@ -2374,7 +2237,7 @@ function renderBattleEnemyBoard() {
 let isAttackAnimating = false;
 
 function handleBattleAttack(row, col) {
-   // console.log(`[Game] 🎯 Battle attack at (${row}, ${col})`);
+    console.log(`[Game] 🎯 Battle attack at (${row}, ${col})`);
     
     // Check if animation is playing
     if (isAttackAnimating) {
@@ -2431,7 +2294,7 @@ function startAttackAnimation(cell, row, col, roomCode) {
         
         // Send attack via socket
         if (gameState.socket) {
-           // console.log('[Game] 📡 Sending attack to server...');
+            console.log('[Game] 📡 Sending attack to server...');
             gameState.socket.emit('attack', { 
                 roomId: roomCode,
                 row, 
@@ -2489,15 +2352,15 @@ function appendShotHistory(isMyAttack, row, col, hit) {
 
 // Battle event handlers (called from socket handlers)
 function handleBattleAttackResult(data) {
-    //console.log('[Game] 💥 Attack result:', data);
+    console.log('[Game] 💥 Attack result:', data);
     
     const myUserId = BattleshipState.getUserId();
     const isMyAttack = data.attackerId === myUserId;
     const sunkShipName = data.shipName || data.shipSunk;
     
-    //console.log('[Game] My userId:', myUserId);
-    //console.log('[Game] Attacker ID:', data.attackerId);
-    //console.log('[Game] Is my attack:', isMyAttack);
+    console.log('[Game] My userId:', myUserId);
+    console.log('[Game] Attacker ID:', data.attackerId);
+    console.log('[Game] Is my attack:', isMyAttack);
     
     if (isMyAttack) {
         // I attacked - update enemy board (main grid)
@@ -2525,9 +2388,6 @@ function handleBattleAttackResult(data) {
                         updateShipTracker(sunkShipName, true);
                     }
                     animateSunkShipCells(data.shipCells, '#battleEnemyBoard');
-                    const enemyBoard = document.getElementById('battleEnemyBoard');
-                    const shipImage = getOpponentShipImage(sunkShipName);
-                    renderSunkShipOnBoard(enemyBoard, sunkShipName, data.shipCells, shipImage);
                 }, 800); // Show after HIT stamp
                 nextTurnNotificationDelay = SUNK_ANIM_BUFFER;
             } else {
@@ -2607,11 +2467,11 @@ function animateSunkShipCells(shipCells, boardSelector) {
             const targetCell = document.querySelector(`${boardSelector} .cell[data-row="${row}"][data-col="${col}"]`);
             if (!targetCell) return;
             
-            targetCell.classList.add('ship-sunk', 'ship-sunk-anim');
+            targetCell.classList.add('ship-sunk');
             showExplosionEffect(targetCell);
             
             setTimeout(() => {
-                targetCell.classList.remove('ship-sunk-anim');
+                targetCell.classList.remove('ship-sunk');
             }, 1400);
         }, delay);
     });
@@ -2640,7 +2500,7 @@ function showSunkStamp(shipName) {
 // handleBattleUnderAttack - Logic now merged into handleBattleAttackResult
 // Kept for backward compatibility if server sends 'under_attack' event separately
 function handleBattleUnderAttack(data) {
-    //console.log('[Game] 🎯 Under attack (legacy handler):', data);
+    console.log('[Game] 🎯 Under attack (legacy handler):', data);
     // legacy handler (kept for older events)
     // But keeping this in case server sends separate event
     const cell = document.querySelector(`#battleMyBoard .cell[data-row="${data.row}"][data-col="${data.col}"]`);
@@ -2659,16 +2519,16 @@ function handleBattleUnderAttack(data) {
     appendShotHistory(false, data.row, data.col, data.hit);
 }
 function handleBattleTurnChanged(data) {
-    //console.log('[Game] 🔄 Turn changed:', data);
+    console.log('[Game] 🔄 Turn changed:', data);
     
     // Server sends currentTurn (userId), not isMyTurn (boolean)
     // Check if currentTurn matches my userId
     const myUserId = BattleshipState.getUserId();
     const isMyTurn = data.currentTurn === myUserId || data.isMyTurn === true;
     
-    //console.log('[Game] My userId:', myUserId);
-    //console.log('[Game] Current turn userId:', data.currentTurn);
-    //console.log('[Game] Is my turn:', isMyTurn);
+    console.log('[Game] My userId:', myUserId);
+    console.log('[Game] Current turn userId:', data.currentTurn);
+    console.log('[Game] Is my turn:', isMyTurn);
     
     gameState.isMyTurn = isMyTurn;
     showTurnNotification(isMyTurn, consumeTurnNotificationDelay());
@@ -2713,7 +2573,7 @@ function handleBattleTimerUpdate(data) {
     
     // Log occasionally for debugging
     if (seconds % 10 === 0) {
-        //console.log(`[Game] ⏱️ Timer: ${seconds}s`);
+        console.log(`[Game] ⏱️ Timer: ${seconds}s`);
     }
 }
 

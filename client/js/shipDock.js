@@ -14,6 +14,10 @@ const shipDockState = {
     ],
     currentDrag: null,
     ghostElement: null,
+    ghostFrame: null,
+    ghostPending: null,
+    ghostRow: null,
+    ghostCol: null,
     isHorizontal: true,
     characterFolder: 'character1'
 };
@@ -26,6 +30,23 @@ const SHIP_IMAGE_MAP = {
     'Submarine': 'submarine.png',
     'Destroyer': 'destroyer.png'
 };
+
+function getShipSizeByName(shipName, fallbackShip = null) {
+    if (typeof SHIPS !== 'undefined' && Array.isArray(SHIPS)) {
+        const config = SHIPS.find(s => s.name === shipName);
+        if (config && config.size) return config.size;
+    }
+
+    const dockShip = shipDockState.ships.find(s => s.name === shipName);
+    if (dockShip && dockShip.size) return dockShip.size;
+
+    if (fallbackShip?.size) return fallbackShip.size;
+    if (Array.isArray(fallbackShip?.cells) && fallbackShip.cells.length) {
+        return fallbackShip.cells.length;
+    }
+
+    return 1;
+}
 
 // Initialize ship dock
 function initShipDock(characterIndex = 0) {
@@ -150,8 +171,7 @@ function handleDockDragEnd(e) {
         shipEl.classList.remove('dragging');
     }
     
-    removeGhostPreview();
-    shipDockState.currentDrag = null;
+    clearDragState();
 }
 
 // Handle drag over board - show ghost preview with STRICT GRID SNAP
@@ -159,6 +179,19 @@ function handleBoardDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
+    if (typeof gameState !== 'undefined' && gameState?.placementMode?.draggedShip) {
+        const draggedName = gameState.placementMode.draggedShip;
+        if (!shipDockState.currentDrag || shipDockState.currentDrag.shipName !== draggedName) {
+            setDragFromBoard(draggedName);
+        } else {
+            const ship = gameState.myShips?.find(s => s.name === draggedName);
+            const resolvedSize = getShipSizeByName(draggedName, ship);
+            if (resolvedSize && shipDockState.currentDrag.shipSize !== resolvedSize) {
+                shipDockState.currentDrag.shipSize = resolvedSize;
+            }
+        }
+    }
+
     if (!shipDockState.currentDrag) return;
     
     const board = document.getElementById('placementBoard');
@@ -309,43 +342,65 @@ function handleBoardDrop(e) {
 
 // Show ghost preview with INTEGER positioning only - COLORED OVERLAY (no images)
 function showGhostPreview(row, col, isValid) {
+    shipDockState.ghostPending = { row, col, isValid };
+    if (shipDockState.ghostFrame) return;
+
+    shipDockState.ghostFrame = requestAnimationFrame(() => {
+        shipDockState.ghostFrame = null;
+        if (!shipDockState.ghostPending) return;
+        const { row: nextRow, col: nextCol, isValid: nextValid } = shipDockState.ghostPending;
+        shipDockState.ghostPending = null;
+        renderGhostPreview(nextRow, nextCol, nextValid);
+    });
+}
+
+function renderGhostPreview(row, col, isValid) {
     const board = document.getElementById('placementBoard');
     if (!board) return;
-    
-    const cellSize = getCellSize(); // This returns an INTEGER
+
+    if (!shipDockState.currentDrag) return;
+
+    const cellSize = getCellSize();
     const { shipSize } = shipDockState.currentDrag;
-    
-    // Remove old ghost
-    removeGhostPreview();
-    
-    // Create ghost container
-    const ghostContainer = document.createElement('div');
-    ghostContainer.className = `ship-ghost-container ${isValid ? 'valid' : 'invalid'}`;
-    ghostContainer.style.position = 'absolute';
-    ghostContainer.style.pointerEvents = 'none';
-    ghostContainer.style.zIndex = '100';
-    
-    // Create individual cell overlays for the ghost ship
-    for (let i = 0; i < shipSize; i++) {
-        const ghostCell = document.createElement('div');
-        ghostCell.className = 'ship-ghost-cell';
-        
-        if (shipDockState.isHorizontal) {
-            ghostCell.style.left = `${(col + i) * cellSize}px`;
-            ghostCell.style.top = `${row * cellSize}px`;
-        } else {
-            ghostCell.style.left = `${col * cellSize}px`;
-            ghostCell.style.top = `${(row + i) * cellSize}px`;
+    const isHorizontal = shipDockState.isHorizontal;
+
+    let ghostContainer = shipDockState.ghostElement;
+    const ghostKey = `${shipSize}-${isHorizontal}-${cellSize}`;
+
+    if (!ghostContainer || ghostContainer.dataset.key !== ghostKey) {
+        removeGhostPreview();
+
+        ghostContainer = document.createElement('div');
+        ghostContainer.className = 'ship-ghost-container';
+        ghostContainer.style.position = 'absolute';
+        ghostContainer.style.pointerEvents = 'none';
+        ghostContainer.style.zIndex = '100';
+        ghostContainer.dataset.key = ghostKey;
+
+        for (let i = 0; i < shipSize; i++) {
+            const ghostCell = document.createElement('div');
+            ghostCell.className = 'ship-ghost-cell';
+            ghostContainer.appendChild(ghostCell);
         }
-        
+
+        board.appendChild(ghostContainer);
+        shipDockState.ghostElement = ghostContainer;
+    }
+
+    ghostContainer.classList.toggle('valid', isValid);
+    ghostContainer.classList.toggle('invalid', !isValid);
+
+    const ghostCells = ghostContainer.querySelectorAll('.ship-ghost-cell');
+    ghostCells.forEach((ghostCell, i) => {
+        const x = isHorizontal ? (col + i) * cellSize : col * cellSize;
+        const y = isHorizontal ? row * cellSize : (row + i) * cellSize;
+        ghostCell.style.transform = `translate(${x}px, ${y}px)`;
         ghostCell.style.width = `${cellSize}px`;
         ghostCell.style.height = `${cellSize}px`;
-        
-        ghostContainer.appendChild(ghostCell);
-    }
-    
-    board.appendChild(ghostContainer);
-    shipDockState.ghostElement = ghostContainer;
+    });
+
+    shipDockState.ghostRow = row;
+    shipDockState.ghostCol = col;
 }
 
 // Remove ghost preview
@@ -353,6 +408,13 @@ function removeGhostPreview() {
     if (shipDockState.ghostElement) {
         shipDockState.ghostElement.remove();
         shipDockState.ghostElement = null;
+    }
+    shipDockState.ghostPending = null;
+    shipDockState.ghostRow = null;
+    shipDockState.ghostCol = null;
+    if (shipDockState.ghostFrame) {
+        cancelAnimationFrame(shipDockState.ghostFrame);
+        shipDockState.ghostFrame = null;
     }
 }
 
@@ -365,47 +427,33 @@ function handleDragRotation(e) {
         
         // CRITICAL: Update ghost preview immediately after rotation
         if (shipDockState.ghostElement) {
-            // Get last mouse position from ghost element
-            const board = document.getElementById('placementBoard');
-            if (board) {
-                // Trigger a fake dragover event to refresh ghost at current position
-                const rect = board.getBoundingClientRect();
-                const cellSize = getCellSize();
-                
-                // Get current ghost position
-                const firstCell = shipDockState.ghostElement.querySelector('.ship-ghost-cell');
-                if (firstCell) {
-                    const left = parseInt(firstCell.style.left);
-                    const top = parseInt(firstCell.style.top);
-                    
-                    let col = Math.round(left / cellSize);
-                    let row = Math.round(top / cellSize);
-                    
-                    // Clamp to grid bounds
-                    col = Math.max(0, Math.min(GRID_SIZE - 1, col));
-                    row = Math.max(0, Math.min(GRID_SIZE - 1, row));
-                    
-                    // Adjust for new orientation bounds
-                    if (!shipDockState.isHorizontal) {
-                        const maxRow = GRID_SIZE - shipDockState.currentDrag.shipSize;
-                        row = Math.max(0, Math.min(maxRow, row));
-                    } else {
-                        const maxCol = GRID_SIZE - shipDockState.currentDrag.shipSize;
-                        col = Math.max(0, Math.min(maxCol, col));
-                    }
-                    
-                    // Check if placement is valid with new orientation
-                    const isValid = canPlaceShipAt(
-                        shipDockState.currentDrag.shipSize,
-                        row,
-                        col,
-                        shipDockState.isHorizontal
-                    );
-                    
-                    // Refresh ghost preview with new orientation
-                    showGhostPreview(row, col, isValid);
-                }
+            const row = shipDockState.ghostRow;
+            const col = shipDockState.ghostCol;
+            if (row === null || col === null) return;
+
+            // Clamp to grid bounds
+            let nextRow = Math.max(0, Math.min(GRID_SIZE - 1, row));
+            let nextCol = Math.max(0, Math.min(GRID_SIZE - 1, col));
+
+            // Adjust for new orientation bounds
+            if (!shipDockState.isHorizontal) {
+                const maxRow = GRID_SIZE - shipDockState.currentDrag.shipSize;
+                nextRow = Math.max(0, Math.min(maxRow, nextRow));
+            } else {
+                const maxCol = GRID_SIZE - shipDockState.currentDrag.shipSize;
+                nextCol = Math.max(0, Math.min(maxCol, nextCol));
             }
+
+            // Check if placement is valid with new orientation
+            const isValid = canPlaceShipAt(
+                shipDockState.currentDrag.shipSize,
+                nextRow,
+                nextCol,
+                shipDockState.isHorizontal
+            );
+
+            // Refresh ghost preview with new orientation
+            showGhostPreview(nextRow, nextCol, isValid);
         }
     }
 }
@@ -521,12 +569,39 @@ function handleShipRepositioning(e, shipName) {
     SocketShared.showNotification(`Đã di chuyển ${shipName}!`, 'success');
 }
 
+function setDragFromBoard(shipName) {
+    const ship = gameState.myShips.find(s => s.name === shipName);
+    if (!ship) return;
+
+    const dockShip = shipDockState.ships.find(s => s.name === shipName);
+    shipDockState.currentDrag = {
+        shipId: dockShip ? dockShip.id : shipName.toLowerCase(),
+        shipName: ship.name,
+        shipSize: getShipSizeByName(ship.name, ship),
+        sourceElement: null
+    };
+
+    shipDockState.isHorizontal = ship.cells.length > 1
+        ? ship.cells[0].row === ship.cells[1].row
+        : true;
+}
+
+function clearDragState() {
+    removeGhostPreview();
+    shipDockState.currentDrag = null;
+}
+
 // Helper: Get cell size based on current board size - returns INTEGER
 function getCellSize() {
     const board = document.getElementById('placementBoard');
     if (!board) return 50;
-    
-    const boardWidth = parseInt(window.getComputedStyle(board).width);
+
+    const cellVar = parseFloat(getComputedStyle(board).getPropertyValue('--cell'));
+    if (Number.isFinite(cellVar) && cellVar > 0) {
+        return cellVar;
+    }
+
+    const boardWidth = parseFloat(window.getComputedStyle(board).width);
     return Math.round(boardWidth / GRID_SIZE); // ALWAYS return integer
 }
 
@@ -536,6 +611,9 @@ window.ShipDock = {
     render: renderShipDock,
     reset: handleResetShips,
     updateCount: updatePlacedCount,
+    setDragFromBoard,
+    clearDrag: clearDragState,
+    getCharacterFolder: () => shipDockState.characterFolder,
     getShips: () => shipDockState.ships,
     lockDock: () => {
         // Lock all ship interactions when ready

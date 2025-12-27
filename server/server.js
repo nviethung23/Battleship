@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const https = require('https');
+const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
@@ -27,10 +28,19 @@ const { updateGuestActivitySocket } = require('./middleware/guestActivity');
 const { GUEST_CLEANUP_INTERVAL_MINUTES } = require('./config/guest');
 
 const app = express();
-const server = https.createServer({
-    key: fs.readFileSync(path.join(__dirname, '../key.pem')),
-    cert: fs.readFileSync(path.join(__dirname, '../cert.pem'))
-}, app);
+let server;
+const keyPath = process.env.HTTPS_KEY_PATH || path.join(__dirname, '../key.pem');
+const certPath = process.env.HTTPS_CERT_PATH || path.join(__dirname, '../cert.pem');
+if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+    server = https.createServer({
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath)
+    }, app);
+    console.log('[Server] Using HTTPS with certs:', keyPath, certPath);
+} else {
+    server = http.createServer(app);
+    console.warn('[Server] HTTPS certs not found. Falling back to HTTP.');
+}
 const io = new Server(server, {
     cors: {
         origin: "*",
@@ -154,9 +164,15 @@ io.use((socket, next) => {
     });
 });
 
+function emitOnlineCount() {
+    console.log('[Online] sockets:', io.sockets.sockets.size);
+    io.emit('online_count', { count: io.sockets.sockets.size });
+}
+
 // Socket.IO connection
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.username} (${socket.id})`);
+    emitOnlineCount();
 
     // Update guest activity on connect
     updateGuestActivitySocket(socket);
@@ -339,6 +355,8 @@ io.on('connection', (socket) => {
         } else if (socket.isGuest && isInGame) {
             console.log(`[Disconnect] Guest ${socket.username} is in game, waiting for reconnect...`);
         }
+
+        emitOnlineCount();
     });
 });
 
