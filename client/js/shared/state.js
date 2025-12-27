@@ -74,17 +74,19 @@ const BattleshipState = {
 
     // Get room code
     getRoomCode() {
-        return sessionStorage.getItem(this.KEYS.ROOM_CODE);
+        return sessionStorage.getItem(this.KEYS.ROOM_CODE) || localStorage.getItem(this.KEYS.ROOM_CODE);
     },
 
     // Set room code
     setRoomCode(roomCode) {
         sessionStorage.setItem(this.KEYS.ROOM_CODE, roomCode);
+        localStorage.setItem(this.KEYS.ROOM_CODE, roomCode);
     },
 
     // Clear room code
     clearRoomCode() {
         sessionStorage.removeItem(this.KEYS.ROOM_CODE);
+        localStorage.removeItem(this.KEYS.ROOM_CODE);
     },
 
     // Get mode (queue or private)
@@ -124,6 +126,7 @@ const BattleshipState = {
         localStorage.removeItem('username');
         localStorage.removeItem('isGuest');
         localStorage.removeItem('guestDisplayName');
+        localStorage.removeItem(this.KEYS.ROOM_CODE);
     },
 
     // Sync from localStorage to sessionStorage (for initial page load)
@@ -133,6 +136,7 @@ const BattleshipState = {
         const username = localStorage.getItem('username');
         const isGuest = localStorage.getItem('isGuest');
         const guestDisplayName = localStorage.getItem('guestDisplayName');
+        const roomCode = localStorage.getItem(this.KEYS.ROOM_CODE);
 
         if (token && !sessionStorage.getItem(this.KEYS.TOKEN)) {
             sessionStorage.setItem(this.KEYS.TOKEN, token);
@@ -148,6 +152,9 @@ const BattleshipState = {
         }
         if (guestDisplayName && !sessionStorage.getItem(this.KEYS.GUEST_DISPLAY_NAME)) {
             sessionStorage.setItem(this.KEYS.GUEST_DISPLAY_NAME, guestDisplayName);
+        }
+        if (roomCode && !sessionStorage.getItem(this.KEYS.ROOM_CODE)) {
+            sessionStorage.setItem(this.KEYS.ROOM_CODE, roomCode);
         }
     }
 };

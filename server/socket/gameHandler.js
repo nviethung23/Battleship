@@ -587,10 +587,13 @@ class GameHandler {
         
         room.status = 'playing';
         console.log(`Room status set to: playing`);
+        room.player1.disconnectCount = room.player1.disconnectCount || 0;
+        room.player2.disconnectCount = room.player2.disconnectCount || 0;
 
         // Initialize game state
         // Pick a random player to start
         const startingPlayerId = Math.random() < 0.5 ? room.player1.userId : room.player2.userId;
+        const baseTurnLimit = 60000;
 
         const game = {
             roomId,
@@ -598,18 +601,24 @@ class GameHandler {
                 ...room.player1,
                 characterId: room.player1.characterId || 'character1', // Lưu characterId
                 attackedCells: [],
-                ships: room.player1.ships.map(s => ({ ...s, hits: 0 }))
+                ships: room.player1.ships.map(s => ({ ...s, hits: 0 })),
+                disconnectCount: room.player1.disconnectCount || 0,
+                timeoutCount: 0,
+                turnTimeLimit: baseTurnLimit
             },
             player2: {
                 ...room.player2,
                 characterId: room.player2.characterId || 'character1', // Lưu characterId
                 attackedCells: [],
-                ships: room.player2.ships.map(s => ({ ...s, hits: 0 }))
+                ships: room.player2.ships.map(s => ({ ...s, hits: 0 })),
+                disconnectCount: room.player2.disconnectCount || 0,
+                timeoutCount: 0,
+                turnTimeLimit: baseTurnLimit
             },
             currentTurn: startingPlayerId,
             startTime: Date.now(),
             turnStartTime: Date.now(),
-            turnTimeLimit: 60000 // 60 seconds per turn
+            turnTimeLimit: baseTurnLimit // default, overridden per player
         };
 
         games.set(roomId, game);
@@ -871,7 +880,10 @@ class GameHandler {
 
         // Set turn start time and remaining time
         game.turnStartTime = Date.now();
-        game.turnTimeRemaining = Math.floor(game.turnTimeLimit / 1000); // 60 seconds
+        const currentPlayer = game.currentTurn === game.player1.userId ? game.player1 : game.player2;
+        const turnLimit = currentPlayer?.turnTimeLimit || game.turnTimeLimit || 60000;
+        game.turnTimeLimit = turnLimit;
+        game.turnTimeRemaining = Math.floor(turnLimit / 1000);
 
         // Start countdown interval - emit every second
         game.turnCountdownInterval = setInterval(() => {
@@ -898,7 +910,7 @@ class GameHandler {
             }
         }, 1000);
 
-        // Main timeout - switch turn after 60s
+        // Main timeout - switch turn after limit
         game.turnTimer = setTimeout(() => {
             // Clear the countdown interval
             if (game.turnCountdownInterval) {
@@ -909,6 +921,20 @@ class GameHandler {
             // Auto switch turn if timeout
             const currentPlayer = game.currentTurn === game.player1.userId ? game.player1 : game.player2;
             const nextPlayer = game.currentTurn === game.player1.userId ? game.player2 : game.player1;
+
+            currentPlayer.timeoutCount = (currentPlayer.timeoutCount || 0) + 1;
+            if (currentPlayer.timeoutCount > 5) {
+                currentPlayer.turnTimeLimit = 5000;
+            }
+            if (currentPlayer.timeoutCount > 10) {
+                this.io.to(roomId).emit('player_disconnect_timeout', {
+                    disconnectedPlayer: currentPlayer.username,
+                    winner: nextPlayer?.username,
+                    message: `${currentPlayer.username} forfeited after too many timeouts.`
+                });
+                this.endGame(roomId, nextPlayer.userId);
+                return;
+            }
 
             this.io.to(roomId).emit('turn_timeout', {
                 timeoutPlayer: currentPlayer.username
@@ -922,7 +948,7 @@ class GameHandler {
             });
 
             this.startTurnTimer(roomId);
-        }, game.turnTimeLimit);
+        }, turnLimit);
     }
 
     // End game
@@ -1091,6 +1117,30 @@ class GameHandler {
                 if (disconnectedPlayer) {
                     disconnectedPlayer.disconnected = true;
                     disconnectedPlayer.disconnectedAt = Date.now();
+                    disconnectedPlayer.disconnectCount = (disconnectedPlayer.disconnectCount || 0) + 1;
+
+                    if (game) {
+                        const gamePlayer = game.player1.userId === playerUserId ? game.player1 : game.player2;
+                        if (gamePlayer) {
+                            gamePlayer.disconnectCount = disconnectedPlayer.disconnectCount;
+                        }
+                    }
+
+                    if (disconnectedPlayer.disconnectCount > 5) {
+                        if (room.battleDisconnectTimer) {
+                            clearTimeout(room.battleDisconnectTimer);
+                            room.battleDisconnectTimer = null;
+                        }
+                        if (otherPlayer) {
+                            this.io.to(roomId).emit('player_disconnect_timeout', {
+                                disconnectedPlayer: disconnectedPlayer.username,
+                                winner: otherPlayer.username,
+                                message: `${disconnectedPlayer.username} forfeited after too many disconnects.`
+                            });
+                            this.endGame(roomId, otherPlayer.userId);
+                        }
+                        return true;
+                    }
                 }
                 
                 // Notify opponent that player is reconnecting

@@ -97,6 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('[Game] Got roomCode from URL:', roomCode);
         }
     }
+
+    if (!roomCode) {
+        console.warn('[Game] No room code found, returning to hub');
+        backToHub();
+        return;
+    }
     
     // Setup event listeners FIRST
     setupEventListeners(socket);
@@ -316,6 +322,11 @@ function setupEventListeners(socket) {
 
 // ============ SOCKET HANDLERS ============
 function setupSocketHandlers(socket) {
+    socket.on('room:error', (data) => {
+        console.warn('[Game] room:error:', data);
+        backToHub();
+    });
+
     // Receive actual roomId for chat/webrtc
     socket.on('room:actualRoomId', (data) => {
         console.log('[Game] 📍 Received actual roomId:', data);
