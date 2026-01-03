@@ -1389,16 +1389,27 @@ class GameHandler {
                 clearTimeout(playerRoom.battleDisconnectTimer);
             }
             
-            // Notify opponent
-            if (otherPlayer) {
-                this.io.to(roomId).emit('player:disconnected', {
-                    playerId: playerUserId,
-                    message: `${disconnectedPlayer.username} disconnected`,
-                    gracePeriod: 10
-                });
-            }
+            // Delay 2s before notifying opponent (skip notification for fast reconnects)
+            setTimeout(async () => {
+                // Check if user reconnected during 2s delay
+                const redis = socketStateManager.getRedisClient();
+                const stillDisconnected = await redis.get(`user:${playerUserId}:connected`);
+                
+                if (stillDisconnected !== 'true') {
+                    // Still disconnected after 2s - notify opponent
+                    if (otherPlayer) {
+                        this.io.to(roomId).emit('player:disconnected', {
+                            playerId: playerUserId,
+                            message: `${disconnectedPlayer.username} disconnected`,
+                            gracePeriod: 10
+                        });
+                    }
+                } else {
+                    console.log(`[Disconnect] ⚡ User reconnected within 2s - skipping notification`);
+                }
+            }, 2000);
             
-            // Start 10s timer
+            // Start 10s timer (starts immediately, but notification delayed by 2s)
             playerRoom.battleDisconnectTimer = setTimeout(async () => {
                 console.log(`[Disconnect] Grace period timer triggered for ${playerUserId}, checking Redis state...`);
                 
@@ -1414,14 +1425,23 @@ class GameHandler {
                 // If user reconnected, cancel timeout
                 if (graceStatus.hasReconnected || !graceStatus.isStillDisconnected) {
                     console.log(`[Disconnect] ✅ User ${playerUserId} RECONNECTED - cancelling timeout`);
+                    
+                    // Calculate disconnect duration BEFORE deleting disconnectTime
+                    const disconnectDuration = Date.now() - (disconnectedPlayer.disconnectTime || Date.now());
+                    
                     disconnectedPlayer.disconnected = false;
                     delete disconnectedPlayer.disconnectTime;
                     delete playerRoom.battleDisconnectTimer;
                     
-                    this.io.to(roomId).emit('player:reconnected', {
-                        playerId: playerUserId,
-                        message: `${disconnectedPlayer.username} reconnected`
-                    });
+                    // Only emit reconnect notification if disconnect lasted > 1s (not page navigation)
+                    if (disconnectDuration > 1000) {
+                        this.io.to(roomId).emit('player:reconnected', {
+                            playerId: playerUserId,
+                            message: `${disconnectedPlayer.username} reconnected`
+                        });
+                    } else {
+                        console.log(`[Disconnect] ⚡ Fast reconnect (${disconnectDuration}ms) - skipping notification (page navigation)`);
+                    }
                     return;
                 }
                 
