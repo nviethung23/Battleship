@@ -31,6 +31,15 @@ const SHIP_IMAGE_MAP = {
     'Destroyer': 'destroyer.png'
 };
 
+// Ship image dimensions (width x height in pixels)
+const SHIP_IMAGE_DIMENSIONS = {
+    'Carrier': { width: 50, height: 250 },      // 5 cells
+    'Battleship': { width: 50, height: 200 },   // 4 cells
+    'Cruiser': { width: 50, height: 150 },      // 3 cells
+    'Submarine': { width: 50, height: 150 },    // 3 cells
+    'Destroyer': { width: 50, height: 100 }     // 2 cells
+};
+
 function getShipSizeByName(shipName, fallbackShip = null) {
     if (typeof SHIPS !== 'undefined' && Array.isArray(SHIPS)) {
         const config = SHIPS.find(s => s.name === shipName);
@@ -179,8 +188,11 @@ function handleBoardDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
+    // Check if dragging from BOARD (repositioning existing ship)
     if (typeof gameState !== 'undefined' && gameState?.placementMode?.draggedShip) {
         const draggedName = gameState.placementMode.draggedShip;
+        
+        // Setup drag state for repositioning
         if (!shipDockState.currentDrag || shipDockState.currentDrag.shipName !== draggedName) {
             setDragFromBoard(draggedName);
         } else {
@@ -220,6 +232,19 @@ function handleBoardDragOver(e) {
         col = Math.max(0, Math.min(maxCol, col));
     }
     
+    // If repositioning, temporarily clear old position to check collision
+    let oldShipCells = null;
+    if (gameState?.placementMode?.draggedShip) {
+        const draggedShip = gameState.myShips.find(s => s.name === gameState.placementMode.draggedShip);
+        if (draggedShip) {
+            oldShipCells = [...draggedShip.cells]; // Save old cells
+            // Temporarily clear old position
+            draggedShip.cells.forEach(cell => {
+                gameState.myBoard[cell.row][cell.col] = null;
+            });
+        }
+    }
+    
     // Check if placement is valid
     const isValid = canPlaceShipAt(
         shipDockState.currentDrag.shipSize,
@@ -227,6 +252,16 @@ function handleBoardDragOver(e) {
         col,
         shipDockState.isHorizontal
     );
+    
+    // Restore old position if repositioning
+    if (oldShipCells) {
+        const draggedShip = gameState.myShips.find(s => s.name === gameState.placementMode.draggedShip);
+        if (draggedShip) {
+            oldShipCells.forEach(cell => {
+                gameState.myBoard[cell.row][cell.col] = draggedShip.name;
+            });
+        }
+    }
     
     // Show ghost preview at SNAPPED integer position
     showGhostPreview(row, col, isValid);
@@ -340,7 +375,7 @@ function handleBoardDrop(e) {
     SocketShared.showNotification(`Đã đặt ${ship.label}! ⚓`, 'success');
 }
 
-// Show ghost preview with INTEGER positioning only - COLORED OVERLAY (no images)
+// Show ghost preview with INTEGER positioning only - SMOOTH COLORED OVERLAY
 function showGhostPreview(row, col, isValid) {
     shipDockState.ghostPending = { row, col, isValid };
     if (shipDockState.ghostFrame) return;
@@ -361,12 +396,13 @@ function renderGhostPreview(row, col, isValid) {
     if (!shipDockState.currentDrag) return;
 
     const cellSize = getCellSize();
-    const { shipSize } = shipDockState.currentDrag;
+    const { shipSize, shipName } = shipDockState.currentDrag;
     const isHorizontal = shipDockState.isHorizontal;
 
     let ghostContainer = shipDockState.ghostElement;
     const ghostKey = `${shipSize}-${isHorizontal}-${cellSize}`;
 
+    // Recreate ghost if orientation or size changed
     if (!ghostContainer || ghostContainer.dataset.key !== ghostKey) {
         removeGhostPreview();
 
@@ -377,27 +413,63 @@ function renderGhostPreview(row, col, isValid) {
         ghostContainer.style.zIndex = '100';
         ghostContainer.dataset.key = ghostKey;
 
-        for (let i = 0; i < shipSize; i++) {
-            const ghostCell = document.createElement('div');
-            ghostCell.className = 'ship-ghost-cell';
-            ghostContainer.appendChild(ghostCell);
-        }
-
+        // Create ONE ship image (not segments)
+        const imgPath = `images/characters/${shipDockState.characterFolder}/ships/${SHIP_IMAGE_MAP[shipName]}`;
+        const img = document.createElement('img');
+        img.src = imgPath;
+        img.className = 'ghost-ship-image';
+        img.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        ghostContainer.appendChild(img);
         board.appendChild(ghostContainer);
         shipDockState.ghostElement = ghostContainer;
     }
 
+    // Update valid/invalid state
     ghostContainer.classList.toggle('valid', isValid);
     ghostContainer.classList.toggle('invalid', !isValid);
 
-    const ghostCells = ghostContainer.querySelectorAll('.ship-ghost-cell');
-    ghostCells.forEach((ghostCell, i) => {
-        const x = isHorizontal ? (col + i) * cellSize : col * cellSize;
-        const y = isHorizontal ? row * cellSize : (row + i) * cellSize;
-        ghostCell.style.transform = `translate(${x}px, ${y}px)`;
-        ghostCell.style.width = `${cellSize}px`;
-        ghostCell.style.height = `${cellSize}px`;
-    });
+    // Calculate position based on grid
+    const x = col * cellSize;
+    const y = row * cellSize;
+    
+    // Get actual image dimensions for this ship
+    const imgDimensions = SHIP_IMAGE_DIMENSIONS[shipName] || { width: 50, height: 200 };
+    
+    // Calculate container size based on orientation
+    // HORIZONTAL: Container = shipSize cells wide × 1 cell tall
+    // VERTICAL: Container = 1 cell wide × shipSize cells tall
+    // BUT when image rotates 90deg, its width/height swap!
+    
+    let containerWidth, containerHeight;
+    if (isHorizontal) {
+        // Horizontal ship: stretched across multiple cells
+        containerWidth = shipSize * cellSize;
+        containerHeight = cellSize;
+    } else {
+        // Vertical ship: stretched down multiple cells
+        // Image will rotate 90deg, so we need to account for aspect ratio
+        containerWidth = cellSize;
+        containerHeight = shipSize * cellSize;
+    }
+
+    // Position and size the ghost container to match grid cells
+    ghostContainer.style.left = `${x}px`;
+    ghostContainer.style.top = `${y}px`;
+    ghostContainer.style.width = `${containerWidth}px`;
+    ghostContainer.style.height = `${containerHeight}px`;
+    ghostContainer.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+
+    // Rotate image for vertical orientation
+    const img = ghostContainer.querySelector('.ghost-ship-image');
+    if (img) {
+        // When vertical, rotate 90deg - the image will fit inside rotated space
+        img.style.transform = isHorizontal ? 'rotate(0deg)' : 'rotate(90deg)';
+        img.style.opacity = isValid ? '0.8' : '0.5';
+        img.style.filter = isValid 
+            ? 'brightness(1.3) saturate(1.5) drop-shadow(0 0 10px rgba(40, 200, 80, 0.8))'
+            : 'brightness(1.1) saturate(1.2) grayscale(0.3) drop-shadow(0 0 10px rgba(255, 50, 50, 0.8))';
+    }
 
     shipDockState.ghostRow = row;
     shipDockState.ghostCol = col;
@@ -418,43 +490,90 @@ function removeGhostPreview() {
     }
 }
 
-// Handle rotation during drag (R key)
+// Handle rotation during drag (R key) - SMOOTH WITH AUTO-ADJUSTMENT
 function handleDragRotation(e) {
     if ((e.key === 'r' || e.key === 'R') && shipDockState.currentDrag) {
         e.preventDefault();
-        shipDockState.isHorizontal = !shipDockState.isHorizontal;
-        // console.log('[ShipDock] Rotated to:', shipDockState.isHorizontal ? 'horizontal' : 'vertical');
         
-        // CRITICAL: Update ghost preview immediately after rotation
-        if (shipDockState.ghostElement) {
-            const row = shipDockState.ghostRow;
-            const col = shipDockState.ghostCol;
-            if (row === null || col === null) return;
-
-            // Clamp to grid bounds
-            let nextRow = Math.max(0, Math.min(GRID_SIZE - 1, row));
-            let nextCol = Math.max(0, Math.min(GRID_SIZE - 1, col));
-
-            // Adjust for new orientation bounds
-            if (!shipDockState.isHorizontal) {
-                const maxRow = GRID_SIZE - shipDockState.currentDrag.shipSize;
-                nextRow = Math.max(0, Math.min(maxRow, nextRow));
-            } else {
-                const maxCol = GRID_SIZE - shipDockState.currentDrag.shipSize;
-                nextCol = Math.max(0, Math.min(maxCol, nextCol));
+        // Toggle orientation
+        shipDockState.isHorizontal = !shipDockState.isHorizontal;
+        
+        // Get current ghost position
+        let row = shipDockState.ghostRow;
+        let col = shipDockState.ghostCol;
+        
+        if (row === null || col === null) return;
+        
+        const shipSize = shipDockState.currentDrag.shipSize;
+        
+        // SMART POSITION ADJUSTMENT: Find nearest valid position after rotation
+        let adjustedRow = row;
+        let adjustedCol = col;
+        
+        if (!shipDockState.isHorizontal) {
+            // Rotating to VERTICAL
+            // Check if ship will go off bottom edge
+            if (row + shipSize > GRID_SIZE) {
+                // Move ship up to fit
+                adjustedRow = GRID_SIZE - shipSize;
             }
-
-            // Check if placement is valid with new orientation
-            const isValid = canPlaceShipAt(
-                shipDockState.currentDrag.shipSize,
-                nextRow,
-                nextCol,
-                shipDockState.isHorizontal
-            );
-
-            // Refresh ghost preview with new orientation
-            showGhostPreview(nextRow, nextCol, isValid);
+            // Check horizontal bounds (should stay within)
+            if (col < 0) adjustedCol = 0;
+            if (col >= GRID_SIZE) adjustedCol = GRID_SIZE - 1;
+        } else {
+            // Rotating to HORIZONTAL
+            // Check if ship will go off right edge
+            if (col + shipSize > GRID_SIZE) {
+                // Move ship left to fit
+                adjustedCol = GRID_SIZE - shipSize;
+            }
+            // Check vertical bounds (should stay within)
+            if (row < 0) adjustedRow = 0;
+            if (row >= GRID_SIZE) adjustedRow = GRID_SIZE - 1;
         }
+        
+        // If adjusted position has collision, try nearby positions
+        let finalRow = adjustedRow;
+        let finalCol = adjustedCol;
+        let foundValid = canPlaceShipAt(shipSize, adjustedRow, adjustedCol, shipDockState.isHorizontal);
+        
+        if (!foundValid) {
+            // Try nearby positions in a spiral pattern
+            const searchRadius = 3;
+            for (let radius = 1; radius <= searchRadius && !foundValid; radius++) {
+                // Try positions around the adjusted position
+                const offsets = [
+                    [0, -radius], [0, radius],  // Up, Down
+                    [-radius, 0], [radius, 0],  // Left, Right
+                    [-radius, -radius], [-radius, radius], [radius, -radius], [radius, radius] // Diagonals
+                ];
+                
+                for (const [dr, dc] of offsets) {
+                    const testRow = adjustedRow + dr;
+                    const testCol = adjustedCol + dc;
+                    
+                    // Ensure within bounds for new orientation
+                    if (testRow < 0 || testCol < 0) continue;
+                    if (!shipDockState.isHorizontal && testRow + shipSize > GRID_SIZE) continue;
+                    if (shipDockState.isHorizontal && testCol + shipSize > GRID_SIZE) continue;
+                    if (testRow >= GRID_SIZE || testCol >= GRID_SIZE) continue;
+                    
+                    if (canPlaceShipAt(shipSize, testRow, testCol, shipDockState.isHorizontal)) {
+                        finalRow = testRow;
+                        finalCol = testCol;
+                        foundValid = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Update ghost preview with smooth transition
+        const isValid = foundValid;
+        showGhostPreview(finalRow, finalCol, isValid);
+        
+        // console.log('[ShipDock] Rotated to:', shipDockState.isHorizontal ? 'horizontal' : 'vertical', 
+        //            'Position adjusted to:', finalRow, finalCol, 'Valid:', isValid);
     }
 }
 
@@ -518,7 +637,10 @@ function handleShipRepositioning(e, shipName) {
     
     // Find ship in gameState
     const ship = gameState.myShips.find(s => s.name === shipName);
-    if (!ship) return;
+    if (!ship) {
+        removeGhostPreview();
+        return;
+    }
     
     // Determine current orientation
     const isHorizontal = ship.cells.length > 1 ? 
@@ -541,13 +663,16 @@ function handleShipRepositioning(e, shipName) {
     });
     
     // Validate new placement
-    if (!canPlaceShipAt(shipSize, row, col, isHorizontal)) {
+    const isValid = canPlaceShipAt(shipSize, row, col, isHorizontal);
+    
+    if (!isValid) {
         // Restore old position
         ship.cells.forEach(cell => {
             gameState.myBoard[cell.row][cell.col] = shipName;
         });
         SocketShared.showNotification('Không thể đặt tàu ở vị trí này!', 'warning');
         renderPlacementBoard();
+        removeGhostPreview();
         return;
     }
     
@@ -563,8 +688,9 @@ function handleShipRepositioning(e, shipName) {
     // Update ship cells
     ship.cells = newCells;
     
-    // Re-render
+    // Re-render and remove ghost
     renderPlacementBoard();
+    removeGhostPreview();
     
     SocketShared.showNotification(`Đã di chuyển ${shipName}!`, 'success');
 }

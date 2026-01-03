@@ -1,10 +1,12 @@
 const { GameLogic, SHIPS } = require('../utils/gameLogic');
 const Database = require('../config/database');
+const { saveGameState, loadGameStateByIdentifier, removeGameState } = require('../services/gameStateStore');
+const socketStateManager = require('../utils/socketStateManager');
 
 // Lưu trữ rooms và games đang chơi trong memory
 const rooms = new Map();
 const games = new Map();
-const playerSockets = new Map(); // userId -> socketId
+const playerSockets = new Map(); // userId -> socketId (DEPRECATED - use socketStateManager)
 const matchmakingQueue = []; // Queue for Quick Play: [{socketId, userId, username, isGuest, guestDisplayName, queuedAt}]
 
 class GameHandler {
@@ -65,6 +67,85 @@ class GameHandler {
         }
         
         return null;
+    }
+
+    buildRoomFromGame(game) {
+        if (!game || !game.player1 || !game.player2) {
+            return null;
+        }
+
+        const roomCode = game.roomCode && game.roomCode !== game.roomId ? game.roomCode : null;
+        const isPrivate = Boolean(roomCode);
+
+        return {
+            id: game.roomId,
+            code: roomCode,
+            isPrivate,
+            status: 'playing',
+            player1: {
+                userId: game.player1.userId,
+                username: game.player1.username,
+                socketId: game.player1.socketId || null,
+                ready: true,
+                lobbyReady: true,
+                characterId: game.player1.characterId,
+                characterLocked: true,
+                isGuest: game.player1.isGuest || false,
+                guestDisplayName: game.player1.guestDisplayName || null
+            },
+            player2: {
+                userId: game.player2.userId,
+                username: game.player2.username,
+                socketId: game.player2.socketId || null,
+                ready: true,
+                lobbyReady: true,
+                characterId: game.player2.characterId,
+                characterLocked: true,
+                isGuest: game.player2.isGuest || false,
+                guestDisplayName: game.player2.guestDisplayName || null
+            },
+            createdAt: game.startTime || Date.now()
+        };
+    }
+
+    async getGameByIdentifier(identifier) {
+        const cached = this.findGameByCodeOrId(identifier);
+        if (cached) {
+            return cached;
+        }
+
+        const restored = await loadGameStateByIdentifier(identifier);
+        if (!restored) {
+            return null;
+        }
+
+        const { game, roomId } = restored;
+
+        if (!games.has(roomId)) {
+            games.set(roomId, game);
+        }
+
+        if (!rooms.has(roomId)) {
+            const room = this.buildRoomFromGame(game);
+            if (room) {
+                rooms.set(roomId, room);
+            }
+        }
+
+        return { game, roomId };
+    }
+
+    persistGameState(game) {
+        if (!game) return;
+        saveGameState(game).catch((error) => {
+            console.warn('[GameState] Persist failed:', error.message || error);
+        });
+    }
+
+    clearGameState(roomId, roomCode) {
+        removeGameState(roomId, roomCode).catch((error) => {
+            console.warn('[GameState] Clear failed:', error.message || error);
+        });
     }
 
     // Sanitize room object to prevent circular references
@@ -165,6 +246,10 @@ class GameHandler {
         
         // Delete room and game
         rooms.delete(roomId);
+        this.clearGameState(roomId, room.code || null);
+        if (games.has(roomId)) {
+            games.delete(roomId);
+        }
         const gameId = room.gameId;
         if (gameId) {
             games.delete(gameId);
@@ -225,7 +310,7 @@ class GameHandler {
     }
     
     // Leave room handler
-    leaveRoom(socket, data) {
+    async leaveRoom(socket, data) {
         const { userId } = data;
         
         // Find room user is in
@@ -251,38 +336,70 @@ class GameHandler {
         const isPrivate = targetRoom.isPrivate || false;
         const game = games.get(targetRoomId);
         
-        // ============ PLAYER LEAVING DURING BATTLE - opponent wins immediately ============
-        if (game && targetRoom.status === 'playing') {
+        // ============ PLAYER LEAVING DURING BATTLE OR DEPLOYMENT - opponent wins immediately ============
+        if ((game && targetRoom.status === 'playing') || targetRoom.status === 'deploying') {
             const leavingPlayer = targetRoom.player1?.userId === userId ? targetRoom.player1 : targetRoom.player2;
             const winner = targetRoom.player1?.userId === userId ? targetRoom.player2 : targetRoom.player1;
             
-            console.log(`[Room] Player ${leavingPlayer?.username} LEFT during battle - ${winner?.username} wins!`);
+            console.log(`[LeaveRoom] Player ${leavingPlayer?.username} LEFT during ${targetRoom.status} - ${winner?.username} WINS IMMEDIATELY!`);
             
-            // Notify opponent
-            if (winner) {
-                this.io.to(targetRoomId).emit('player_disconnect_timeout', {
-                    disconnectedPlayer: leavingPlayer?.username,
-                    winner: winner.username,
-                    message: `${leavingPlayer?.username} đã rời khỏi trận đấu!`
-                });
-                
-                // End game with winner
-                this.endGame(targetRoomId, winner.userId);
+            // Stop all timers
+            if (targetRoom.deploymentTimerInterval) {
+                clearInterval(targetRoom.deploymentTimerInterval);
+                targetRoom.deploymentTimerInterval = null;
+            }
+            if (targetRoom.battleDisconnectTimer) {
+                clearTimeout(targetRoom.battleDisconnectTimer);
+                targetRoom.battleDisconnectTimer = null;
+            }
+            if (targetRoom.disconnectTimer) {
+                clearTimeout(targetRoom.disconnectTimer);
+                targetRoom.disconnectTimer = null;
             }
             
-            console.log(`[Room] User ${userId} left room ${targetRoom.code || targetRoomId} during battle`);
+            // End game with winner - this will emit game_over event
+            if (winner) {
+                if (game) {
+                    // Battle phase - use existing endGame
+                    this.endGame(targetRoomId, winner.userId);
+                } else {
+                    // Deployment phase - create game record and emit game_over
+                    console.log(`[LeaveRoom] Creating game record for deployment leave`);
+                    const reasonMessage = targetRoom.status === 'deploying' 
+                        ? 'left during deployment'
+                        : 'left the game';
+                    await this.createGameAndEndWithWinner(targetRoomId, targetRoom, winner.userId, reasonMessage);
+                }
+            }
+            
+            console.log(`[LeaveRoom] ✅ User ${userId} left room ${targetRoom.code || targetRoomId} during ${targetRoom.status} - Opponent wins`);
+            
+            // Clear socket session
+            await socketStateManager.clearSession(userId, socket.id);
+            
             return;
         }
         
-        // Normal leave (not during battle)
+        // Normal leave (not during battle/deployment)
         if (isHost) {
-            // Host leaving -> always disband
-            this.disbandRoom(targetRoomId, 'Host left');
+            // Host leaving
+            if (!targetRoom.player2) {
+                // Only host in room - just delete room silently
+                console.log(`[Room] Host ${userId} left empty room ${targetRoom.code || targetRoomId}`);
+                rooms.delete(targetRoomId);
+                socket.leave(targetRoomId);
+                this.broadcastRoomList();
+            } else {
+                // Host leaving with player2 present - disband normally
+                console.log(`[Room] Host left during ${targetRoom.status} - disbanding`);
+                this.disbandRoom(targetRoomId, 'Host left');
+            }
         } else if (isPrivate) {
             // Player2 leaving private room -> reset to waiting
             this.resetPrivateToWaiting(targetRoomId, targetRoom, 'Player 2 left');
         } else {
-            // Player2 leaving public room -> disband
+            // Player2 leaving public room
+            console.log(`[Room] Player2 left during ${targetRoom.status} - disbanding`);
             this.disbandRoom(targetRoomId, 'Player left');
         }
         
@@ -522,10 +639,29 @@ class GameHandler {
         
         const { room, roomId: actualRoomId } = result;
         console.log('[GameHandler] ✅ Room found. Actual roomId:', actualRoomId);
-        console.log('[GameHandler] Current status:', {
+        console.log('[GameHandler] Room status:', room.status);
+        console.log('[GameHandler] Current ready status:', {
             player1Ready: room.player1?.ready,
             player2Ready: room.player2?.ready
         });
+
+        // ✅ CRITICAL: Validate room is in deploying phase
+        if (room.status !== 'deploying') {
+            console.error('[GameHandler] ❌ Room not in deploying phase:', room.status);
+            return socket.emit('error', { 
+                message: `Cannot deploy ships - game is in ${room.status} phase`,
+                currentPhase: room.status
+            });
+        }
+        
+        // ✅ CRITICAL: Check if user is actually in this room
+        const isPlayer1 = room.player1 && room.player1.userId === userId;
+        const isPlayer2 = room.player2 && room.player2.userId === userId;
+        
+        if (!isPlayer1 && !isPlayer2) {
+            console.error('[GameHandler] ❌ User not in room:', userId);
+            return socket.emit('error', { message: 'You are not in this room' });
+        }
 
         // Validate ships
         if (!GameLogic.isValidBoard(ships)) {
@@ -534,12 +670,12 @@ class GameHandler {
         }
 
         // Set player ready
-        if (room.player1.userId === userId) {
+        if (isPlayer1) {
             room.player1.ready = true;
             room.player1.ships = ships;
             room.player1.board = board;
             console.log('[GameHandler] 🔵 Player 1 marked as ready');
-        } else if (room.player2 && room.player2.userId === userId) {
+        } else if (isPlayer2) {
             room.player2.ready = true;
             room.player2.ships = ships;
             room.player2.board = board;
@@ -590,6 +726,21 @@ class GameHandler {
         room.player1.disconnectCount = room.player1.disconnectCount || 0;
         room.player2.disconnectCount = room.player2.disconnectCount || 0;
 
+        // ✅ CRITICAL: Validate both players have ships before starting
+        if (!room.player1.ships || !Array.isArray(room.player1.ships) || room.player1.ships.length === 0) {
+            console.error(`❌ Player 1 has no ships! Cannot start game.`);
+            this.io.to(roomId).emit('game:error', { message: 'Player 1 không có ships!' });
+            return;
+        }
+        
+        if (!room.player2 || !room.player2.ships || !Array.isArray(room.player2.ships) || room.player2.ships.length === 0) {
+            console.error(`❌ Player 2 has no ships! Cannot start game.`);
+            this.io.to(roomId).emit('game:error', { message: 'Player 2 không có ships!' });
+            return;
+        }
+        
+        console.log(`✅ Both players have ships - starting game...`);
+
         // Initialize game state
         // Pick a random player to start
         const startingPlayerId = Math.random() < 0.5 ? room.player1.userId : room.player2.userId;
@@ -597,6 +748,7 @@ class GameHandler {
 
         const game = {
             roomId,
+            roomCode: room.code || roomId,
             player1: {
                 ...room.player1,
                 characterId: room.player1.characterId || 'character1', // Lưu characterId
@@ -625,6 +777,7 @@ class GameHandler {
 
         // Start turn timer
         this.startTurnTimer(roomId);
+        this.persistGameState(game);
 
         // Notify both players
         const gameStartData = {
@@ -668,14 +821,13 @@ class GameHandler {
     }
 
     // ============ REJOIN GAME AFTER REFRESH ============
-    rejoinGame(socket, data) {
+    async rejoinGame(socket, data) {
         const { roomId, userId } = data;
         
         console.log(`[Rejoin] Player ${userId} attempting to rejoin room ${roomId}`);
         
         // Use helper to find game by code or roomId
-        const gameResult = this.findGameByCodeOrId(roomId);
-        const roomResult = this.findRoomByCodeOrId(roomId);
+        const gameResult = await this.getGameByIdentifier(roomId);
         
         if (!gameResult) {
             console.log(`[Rejoin] ❌ Game not found for room ${roomId}`);
@@ -685,7 +837,7 @@ class GameHandler {
         }
         
         const { game, roomId: actualRoomId } = gameResult;
-        const room = roomResult ? roomResult.room : null;
+        const room = rooms.get(actualRoomId) || null;
         
         // Check if user is part of this game
         const isPlayer1 = game.player1.userId === userId;
@@ -727,10 +879,15 @@ class GameHandler {
         
         // Update playerSockets mapping
         playerSockets.set(userId, socket.id);
+        this.persistGameState(game);
         
         // Re-join socket room
         socket.join(actualRoomId);
         console.log(`[Rejoin] ✅ Socket ${socket.id} rejoined room ${actualRoomId}`);
+
+        if (!game.turnTimer) {
+            this.startTurnTimer(actualRoomId);
+        }
         
         // Prepare rejoin data
         const rejoinData = {
@@ -764,7 +921,7 @@ class GameHandler {
     }
 
     // Process attack
-    attack(socket, data) {
+    async attack(socket, data) {
         const { roomId, userId, row, col } = data;
         
         // Validate coordinates
@@ -777,7 +934,7 @@ class GameHandler {
         }
         
         // Use helper to find game by code or roomId
-        const gameResult = this.findGameByCodeOrId(roomId);
+        const gameResult = await this.getGameByIdentifier(roomId);
 
         if (!gameResult) {
             return socket.emit('error', { message: 'Game not found' });
@@ -863,6 +1020,7 @@ class GameHandler {
             // Restart turn timer (vẫn là lượt của người này)
             this.startTurnTimer(actualRoomId);
         }
+        this.persistGameState(game);
     }
 
     // Turn timer
@@ -948,6 +1106,7 @@ class GameHandler {
             });
 
             this.startTurnTimer(roomId);
+            this.persistGameState(game);
         }, turnLimit);
     }
 
@@ -991,6 +1150,7 @@ class GameHandler {
         Database.createGame(gameRecord).catch(err => {
             console.error('Error saving game to database:', err);
         });
+        this.clearGameState(roomId, room.code || game.roomCode || null);
 
         // Helper to normalize characterId (index to string format)
         const normalizeCharacterId = (charId) => {
@@ -1039,217 +1199,344 @@ class GameHandler {
     }
 
     // Player disconnect - returns true if player is in a game/room (needs grace period)
-    handleDisconnect(socket) {
+    async handleDisconnect(socket) {
+        console.log(`[Disconnect] Socket ${socket.id} disconnected (userId: ${socket.userId})`);
+        
         // Remove from matchmaking queue if present
         this.removeFromQueue(socket.id);
         
-        // Find player's room - use socket.userId directly (more reliable than playerSockets lookup)
-        let playerRoom = null;
         let playerUserId = socket.userId;
-
-        // If no userId on socket, try to find from playerSockets (fallback)
+        
+        // If no userId on socket, try to find from socketStateManager
         if (!playerUserId) {
-            for (const [userId, socketId] of playerSockets.entries()) {
-                if (socketId === socket.id) {
-                    playerUserId = userId;
-                    break;
-                }
-            }
+            playerUserId = await socketStateManager.getUserIdBySocket(socket.id);
         }
-
-        if (!playerUserId) return false;
         
-        // Check if current socket is still the active one for this user
-        // If playerSockets has a DIFFERENT socketId, user already reconnected with new socket
-        const currentSocketId = playerSockets.get(playerUserId);
-        const hasNewSocket = currentSocketId && currentSocketId !== socket.id;
-        
-        if (hasNewSocket) {
-            console.log(`[Disconnect] Old socket ${socket.id} disconnected, user ${playerUserId} already has new socket ${currentSocketId}`);
-            // Don't return yet - still need to check if in battle and handle grace period
+        if (!playerUserId) {
+            console.log(`[Disconnect] No userId found for socket ${socket.id}`);
+            return false;
         }
-
-        for (const [roomId, room] of rooms.entries()) {
+        
+        // Check if this disconnect should be ignored (rapid reconnection)
+        const shouldIgnore = await socketStateManager.shouldIgnoreDisconnect(playerUserId, socket.id);
+        if (shouldIgnore) {
+            console.log(`[Disconnect] Ignoring disconnect for ${playerUserId} - rapid reconnection detected`);
+            return true; // Return true to prevent guest cleanup
+        }
+        
+        // Get socket status from Redis
+        const socketStatus = await socketStateManager.checkSocketStatus(playerUserId, socket.id);
+        console.log(`[Disconnect] Socket status for ${playerUserId}:`, {
+            isCurrent: socketStatus.isCurrent,
+            hasNewSocket: socketStatus.hasNewSocket,
+            newSocketId: socketStatus.newSocketId
+        });
+        
+        // Find player's room
+        let playerRoom = null;
+        let roomId = null;
+        
+        for (const [id, room] of rooms.entries()) {
             if ((room.player1 && room.player1.userId === playerUserId) || 
                 (room.player2 && room.player2.userId === playerUserId)) {
-                playerRoom = { roomId, room };
+                playerRoom = room;
+                roomId = id;
                 break;
             }
         }
 
-        if (playerRoom) {
-            const { roomId, room } = playerRoom;
-            const game = games.get(roomId);
-            
-            const isHost = room.player1 && room.player1.userId === playerUserId;
-            const disconnectedPlayer = room.player1?.userId === playerUserId ? room.player1 : room.player2;
-            const otherPlayer = room.player1?.userId === playerUserId ? room.player2 : room.player1;
-            
-            // If user has new socket and NOT in active battle, just return (reconnecting)
-            if (hasNewSocket && room.status !== 'playing') {
-                return true; // User reconnected, don't cleanup for non-battle states
-            }
-            
-            // Include 'preparing' and 'deploying' states for grace period during page transitions
-            const needsGracePeriod = ['waiting', 'character_selection', 'preparing', 'deploying'].includes(room.status);
-            
-            // ============ BATTLE DISCONNECT - 10s GRACE PERIOD ============
-            if (game && room.status === 'playing') {
-                // Check if the new socket has actually joined THIS room
-                // Having a new socket doesn't mean they rejoined the game - they could be on hub.html
-                let newSocketInRoom = false;
-                if (hasNewSocket) {
-                    const newSocketId = playerSockets.get(playerUserId);
-                    const roomSockets = this.io.sockets.adapter.rooms.get(roomId);
-                    newSocketInRoom = roomSockets && roomSockets.has(newSocketId);
-                    
-                    if (newSocketInRoom && disconnectedPlayer && !disconnectedPlayer.disconnected) {
-                        console.log(`[Battle Disconnect] Player ${playerUserId} has new socket IN ROOM and already reconnected, skipping countdown`);
-                        return true;
-                    } else if (!newSocketInRoom) {
-                        console.log(`[Battle Disconnect] Player ${playerUserId} has new socket but NOT in room ${roomId} - starting countdown`);
-                    }
-                }
-                
-                console.log(`[Battle Disconnect] Player ${disconnectedPlayer?.username} disconnected during battle, starting 10s grace period...`);
-                
-                // Mark player as disconnected
-                if (disconnectedPlayer) {
-                    disconnectedPlayer.disconnected = true;
-                    disconnectedPlayer.disconnectedAt = Date.now();
-                    disconnectedPlayer.disconnectCount = (disconnectedPlayer.disconnectCount || 0) + 1;
+        if (!playerRoom) {
+            console.log(`[Disconnect] User ${playerUserId} not in any room`);
+            await socketStateManager.clearSession(playerUserId, socket.id);
+            return false;
+        }
 
-                    if (game) {
-                        const gamePlayer = game.player1.userId === playerUserId ? game.player1 : game.player2;
-                        if (gamePlayer) {
-                            gamePlayer.disconnectCount = disconnectedPlayer.disconnectCount;
-                        }
-                    }
-
-                    if (disconnectedPlayer.disconnectCount > 5) {
-                        if (room.battleDisconnectTimer) {
-                            clearTimeout(room.battleDisconnectTimer);
-                            room.battleDisconnectTimer = null;
-                        }
-                        if (otherPlayer) {
-                            this.io.to(roomId).emit('player_disconnect_timeout', {
-                                disconnectedPlayer: disconnectedPlayer.username,
-                                winner: otherPlayer.username,
-                                message: `${disconnectedPlayer.username} forfeited after too many disconnects.`
-                            });
-                            this.endGame(roomId, otherPlayer.userId);
-                        }
-                        return true;
-                    }
-                }
-                
-                // Notify opponent that player is reconnecting
-                this.io.to(roomId).emit('player_reconnecting', {
-                    username: disconnectedPlayer?.username,
-                    userId: playerUserId,
-                    gracePeriod: 10 // seconds
-                });
-                
-                // Start 10s countdown
-                if (!room.battleDisconnectTimer) {
-                    room.battleDisconnectTimer = setTimeout(() => {
-                        const currentRoom = rooms.get(roomId);
-                        const currentGame = games.get(roomId);
-                        if (!currentRoom || !currentGame) return;
-                        
-                        // Check if player reconnected
-                        const player = currentRoom.player1?.userId === playerUserId ? currentRoom.player1 : 
-                                      currentRoom.player2?.userId === playerUserId ? currentRoom.player2 : null;
-                        
-                        if (player && !player.disconnected) {
-                            console.log(`[Battle Disconnect] Player ${playerUserId} reconnected within grace period`);
-                            return;
-                        }
-                        
-                        console.log(`[Battle Disconnect] Player ${playerUserId} did not reconnect within 10s, opponent wins!`);
-                        
-                        // Player didn't reconnect - opponent wins
-                        const winner = currentRoom.player1?.userId === playerUserId ? currentRoom.player2 : currentRoom.player1;
-                        
-                        if (winner) {
-                            // Notify about disconnect timeout
-                            this.io.to(roomId).emit('player_disconnect_timeout', {
-                                disconnectedPlayer: disconnectedPlayer?.username,
-                                winner: winner.username,
-                                message: `${disconnectedPlayer?.username} đã mất kết nối quá 10 giây!`
-                            });
-                            
-                            // End game with winner
-                            this.endGame(roomId, winner.userId);
-                        }
-                        
-                        currentRoom.battleDisconnectTimer = null;
-                    }, 10000); // 10 second grace period for battle
-                }
-                
-                return true; // Player is in battle, needs grace period
-            }
-            
-            // Handle lobby/preparation disconnections with delay (allow page navigation reconnect)
-            if (needsGracePeriod) {
-                console.log(`[Disconnect] Player ${playerUserId} disconnected (status: ${room.status}), waiting 3s for reconnect...`);
-                
-                // Set a reconnection grace period
-                if (!room.disconnectTimer) {
-                    room.disconnectTimer = setTimeout(() => {
-                        // Check if player is still disconnected after 3 seconds
-                        const currentRoom = rooms.get(roomId);
-                        if (!currentRoom) return; // Room already deleted
-                        
-                        // Check if player reconnected (socketId updated)
-                        const player = currentRoom.player1?.userId === playerUserId ? currentRoom.player1 : 
-                                      currentRoom.player2?.userId === playerUserId ? currentRoom.player2 : null;
-                        
-                        if (player && playerSockets.get(player.userId) !== socket.id) {
-                            console.log(`[Disconnect] Player ${playerUserId} reconnected, keeping room`);
-                            return; // Player reconnected with new socket
-                        }
-                        
-                        console.log(`[Disconnect] Player ${playerUserId} did not reconnect, disbanding room`);
-                        
-                        // Still disconnected, proceed with cleanup
-                        if (isHost) {
-                            this.disbandRoom(roomId, 'Host disconnected');
-                        } else if (currentRoom.isPrivate) {
-                            this.resetPrivateToWaiting(roomId, currentRoom, 'Player 2 disconnected');
-                        } else {
-                            this.disbandRoom(roomId, 'Player disconnected');
-                        }
-                        
-                        currentRoom.disconnectTimer = null;
-                    }, 3000); // 3 second grace period for page navigation
-                }
-                
-                return true; // Player is in lobby/preparation, needs grace period
-            }
-
-            // Handle immediate disconnection for other states
-            if (game) {
-                this.io.to(roomId).emit('player_disconnected', {
-                    message: 'Opponent disconnected'
-                });
-
-                if (otherPlayer) {
-                    this.endGame(roomId, otherPlayer.userId);
-                }
-            }
-
-            // Clean up
-            games.delete(roomId);
-            rooms.delete(roomId);
-            playerSockets.delete(playerUserId);
-            this.broadcastRoomList();
-            
-            console.log(`[Disconnect] Cleaned up room ${roomId} (game was active)`);
-            return false; // Room cleaned up, no grace period needed
+        const game = games.get(roomId);
+        const isHost = playerRoom.player1 && playerRoom.player1.userId === playerUserId;
+        const disconnectedPlayer = playerRoom.player1?.userId === playerUserId ? playerRoom.player1 : playerRoom.player2;
+        const otherPlayer = playerRoom.player1?.userId === playerUserId ? playerRoom.player2 : playerRoom.player1;
+        
+        console.log(`[Disconnect] User ${playerUserId} in room ${roomId}, status=${playerRoom.status}, isHost=${isHost}`);
+        
+        // ✅ CRITICAL: Skip grace period for finished/game_over rooms
+        if (playerRoom.status === 'finished' || playerRoom.status === 'game_over') {
+            console.log(`[Disconnect] Room ${roomId} already ended (${playerRoom.status}) - skipping grace period`);
+            await socketStateManager.clearSession(playerUserId, socket.id);
+            return false;
         }
         
-        return false; // Player not in any room
+        // If user has a new socket, check if they're still in the room
+        if (socketStatus.hasNewSocket) {
+            const roomSockets = this.io.sockets.adapter.rooms.get(roomId);
+            const newSocketInRoom = roomSockets && roomSockets.has(socketStatus.newSocketId);
+            
+            console.log(`[Disconnect] User has new socket ${socketStatus.newSocketId}, in room: ${newSocketInRoom}`);
+            
+            if (!newSocketInRoom) {
+                // User navigated away (not in room with new socket)
+                console.log(`[Disconnect] User ${playerUserId} left to hub/lobby`);
+                
+                // 🔥 CRITICAL FIX: CHECK REDIS BEFORE FORFEIT
+                // Old socket disconnect can fire AFTER new socket registered
+                // Redis is source of truth - NEVER trust RAM flags
+                const redis = socketStateManager.getRedisClient();
+                if (redis) {
+                    try {
+                        const redisConnected = await redis.get(`user:${playerUserId}:connected`);
+                        const redisSocketId = await redis.get(`user:${playerUserId}:socket`);
+                        
+                        console.log(`[Disconnect] Redis check before forfeit:`, {
+                            connected: redisConnected,
+                            redisSocketId,
+                            currentSocketId: socket.id
+                        });
+                        
+                        // If Redis says user is connected → old socket, ABORT
+                        if (redisConnected === 'true') {
+                            console.log(`[Disconnect] ✅ Redis shows CONNECTED - old socket ignored`);
+                            await socketStateManager.clearSession(playerUserId, socket.id);
+                            return true;
+                        }
+                        
+                        // If Redis socketId doesn't match → stale socket, ABORT
+                        if (redisSocketId && redisSocketId !== socket.id) {
+                            console.log(`[Disconnect] ✅ Stale socket detected (Redis: ${redisSocketId}, current: ${socket.id}) - ignored`);
+                            await socketStateManager.clearSession(playerUserId, socket.id);
+                            return true;
+                        }
+                        
+                        console.log(`[Disconnect] ❌ Redis confirms disconnect - proceeding with forfeit`);
+                    } catch (err) {
+                        console.error(`[Disconnect] Redis check error:`, err.message);
+                        // On error, assume connected (safe default)
+                        console.log(`[Disconnect] ✅ Redis error - assuming connected, aborting forfeit`);
+                        return true;
+                    }
+                }
+                
+                // Clear any existing timers
+                if (playerRoom.disconnectTimer) {
+                    clearTimeout(playerRoom.disconnectTimer);
+                    delete playerRoom.disconnectTimer;
+                }
+                if (playerRoom.battleDisconnectTimer) {
+                    clearTimeout(playerRoom.battleDisconnectTimer);
+                    delete playerRoom.battleDisconnectTimer;
+                }
+                
+                // Handle based on game phase
+                if (playerRoom.status === 'deploying' || (game && playerRoom.status === 'playing')) {
+                    // Battle/Deployment phase - opponent wins immediately
+                    console.log(`[Disconnect] User left during ${playerRoom.status}, opponent wins`);
+                    
+                    if (otherPlayer) {
+                        if (game) {
+                            // Battle phase - use endGame
+                            this.endGame(roomId, otherPlayer.userId);
+                        } else {
+                            // Deployment phase - create game record
+                            console.log(`[Disconnect] Creating game record for deployment navigation away`);
+                            await this.createGameAndEndWithWinner(
+                                roomId,
+                                playerRoom,
+                                otherPlayer.userId,
+                                `${disconnectedPlayer.username} left during deployment`
+                            );
+                        }
+                    } else {
+                        // No opponent - just disband
+                        this.disbandRoom(roomId, `${disconnectedPlayer.username} left during ${playerRoom.status}`);
+                    }
+                } else {
+                    // Lobby phase - disband room
+                    this.disbandRoom(roomId, isHost ? 'Host left' : `${disconnectedPlayer.username} left`);
+                }
+                
+                await socketStateManager.clearSession(playerUserId, socket.id);
+                return true;
+            } else {
+                // User reconnected and is back in room - ignore disconnect
+                console.log(`[Disconnect] User ${playerUserId} reconnected to room, ignoring old socket disconnect`);
+                return true;
+            }
+        }
+        
+        // No new socket detected - start grace period based on game phase
+        const gracePeriodMs = (playerRoom.status === 'deploying' || (game && playerRoom.status === 'playing')) 
+            ? 10000  // 10s for battle/deployment
+            : 3000;  // 3s for lobby
+        
+        // Mark as disconnected in Redis
+        const gracePeriodStarted = await socketStateManager.markDisconnected(playerUserId, socket.id, gracePeriodMs);
+        
+        if (!gracePeriodStarted) {
+            console.log(`[Disconnect] Grace period not started for ${playerUserId} - already reconnected`);
+            return true;
+        }
+        
+        console.log(`[Disconnect] Starting ${gracePeriodMs}ms grace period for ${playerUserId} in room ${roomId} (status: ${playerRoom.status})`);
+        
+        // Mark player as disconnected
+        if (!disconnectedPlayer.disconnected) {
+            disconnectedPlayer.disconnected = true;
+            disconnectedPlayer.disconnectTime = Date.now();
+        }
+        
+        // Battle/Deployment phase - 10s grace period
+        if (playerRoom.status === 'deploying' || (game && playerRoom.status === 'playing')) {
+            // Clear any existing timer
+            if (playerRoom.battleDisconnectTimer) {
+                clearTimeout(playerRoom.battleDisconnectTimer);
+            }
+            
+            // Notify opponent
+            if (otherPlayer) {
+                this.io.to(roomId).emit('player:disconnected', {
+                    playerId: playerUserId,
+                    message: `${disconnectedPlayer.username} disconnected`,
+                    gracePeriod: 10
+                });
+            }
+            
+            // Start 10s timer
+            playerRoom.battleDisconnectTimer = setTimeout(async () => {
+                console.log(`[Disconnect] Grace period timer triggered for ${playerUserId}, checking Redis state...`);
+                
+                // ✅ CRITICAL: Wait 50ms for Redis propagation (network + write latency)
+                // Race condition: New socket might connect during old socket disconnect processing
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
+                // CRITICAL: Check Redis single source of truth (NOT old socketId)
+                const graceStatus = await socketStateManager.checkGracePeriodStatus(playerUserId, 10000);
+                
+                console.log(`[Disconnect] Grace status for ${playerUserId}:`, graceStatus);
+                
+                // If user reconnected, cancel timeout
+                if (graceStatus.hasReconnected || !graceStatus.isStillDisconnected) {
+                    console.log(`[Disconnect] ✅ User ${playerUserId} RECONNECTED - cancelling timeout`);
+                    disconnectedPlayer.disconnected = false;
+                    delete disconnectedPlayer.disconnectTime;
+                    delete playerRoom.battleDisconnectTimer;
+                    
+                    this.io.to(roomId).emit('player:reconnected', {
+                        playerId: playerUserId,
+                        message: `${disconnectedPlayer.username} reconnected`
+                    });
+                    return;
+                }
+                
+                // If grace period NOT expired yet, don't punish
+                if (!graceStatus.gracePeriodExpired) {
+                    console.log(`[Disconnect] ⏰ Grace period not expired for ${playerUserId} - giving more time`);
+                    return;
+                }
+                
+                // 🔥 CRITICAL SAFETY CHECK: Re-check socket status before forfeit
+                // Client might have reconnected but not joined room yet (slow network/page load)
+                const finalSocketStatus = await socketStateManager.checkSocketStatus(playerUserId, socket.id);
+                console.log(`[Disconnect] Final socket check before forfeit:`, finalSocketStatus);
+                
+                if (finalSocketStatus.hasNewSocket) {
+                    console.log(`[Disconnect] ✅ User ${playerUserId} has new socket ${finalSocketStatus.newSocketId} - ABORT forfeit`);
+                    disconnectedPlayer.disconnected = false;
+                    delete disconnectedPlayer.disconnectTime;
+                    delete playerRoom.battleDisconnectTimer;
+                    return;
+                }
+                
+                // Player did not reconnect AND grace period expired - opponent wins
+                console.log(`[Disconnect] ❌ User ${playerUserId} did not reconnect, opponent wins`);
+                
+                if (otherPlayer) {
+                    // Create game record and show game over screen
+                    await this.createGameAndEndWithWinner(
+                        roomId,
+                        playerRoom,
+                        otherPlayer.userId,
+                        `${disconnectedPlayer.username} disconnected`
+                    );
+                } else {
+                    // No opponent - just disband
+                    this.disbandRoom(roomId, `${disconnectedPlayer.username} disconnected`);
+                }
+                
+                await socketStateManager.clearSession(playerUserId, socket.id);
+            }, 10000);
+            
+            return true;
+        }
+        
+        // Lobby phase - 5s grace period (increased from 3s for better UX)
+        if (['waiting', 'character_selection', 'preparing'].includes(playerRoom.status)) {
+            // Clear any existing timer
+            if (playerRoom.disconnectTimer) {
+                clearTimeout(playerRoom.disconnectTimer);
+            }
+            
+            // Start 5s timer
+            playerRoom.disconnectTimer = setTimeout(async () => {
+                console.log(`[Disconnect] Lobby grace period timer triggered for ${playerUserId}`);
+                
+                // ✅ CRITICAL: Wait 50ms for Redis propagation (network + write latency)
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
+                console.log(`[Disconnect] Now checking Redis after buffer...`);
+                
+                // Check Redis single source of truth
+                const graceStatus = await socketStateManager.checkGracePeriodStatus(playerUserId, 5000);
+                
+                console.log(`[Disconnect] Lobby grace status:`, graceStatus);
+                
+                // If user reconnected, cancel timeout
+                if (graceStatus.hasReconnected || !graceStatus.isStillDisconnected) {
+                    console.log(`[Disconnect] ✅ User ${playerUserId} reconnected to lobby`);
+                    disconnectedPlayer.disconnected = false;
+                    delete disconnectedPlayer.disconnectTime;
+                    delete playerRoom.disconnectTimer;
+                    return;
+                }
+                
+                // ✅ DOUBLE CHECK: Query Redis again to catch race conditions
+                const doubleCheck = await socketStateManager.checkGracePeriodStatus(playerUserId, 5000);
+                if (doubleCheck.hasReconnected) {
+                    console.log(`[Disconnect] ✅✅ DOUBLE CHECK: User reconnected, cancelling`);
+                    disconnectedPlayer.disconnected = false;
+                    delete disconnectedPlayer.disconnectTime;
+                    delete playerRoom.disconnectTimer;
+                    return;
+                }
+                
+                // If grace period NOT expired yet, don't punish
+                if (!graceStatus.gracePeriodExpired) {
+                    console.log(`[Disconnect] ⏰ Lobby grace period not expired for ${playerUserId}`);
+                    return;
+                }
+                
+                // 🔥 CRITICAL SAFETY CHECK: Re-check socket status before disbanding
+                const finalSocketStatus = await socketStateManager.checkSocketStatus(playerUserId, socket.id);
+                console.log(`[Disconnect] Final socket check before disband:`, finalSocketStatus);
+                
+                if (finalSocketStatus.hasNewSocket) {
+                    console.log(`[Disconnect] ✅ User ${playerUserId} has new socket ${finalSocketStatus.newSocketId} - ABORT disband`);
+                    disconnectedPlayer.disconnected = false;
+                    delete disconnectedPlayer.disconnectTime;
+                    delete playerRoom.disconnectTimer;
+                    return;
+                }
+                
+                // Player did not reconnect - disband room
+                console.log(`[Disconnect] ❌ User ${playerUserId} did not reconnect to lobby, disbanding`);
+                this.disbandRoom(roomId, isHost ? 'Host left' : `${disconnectedPlayer.username} left`);
+                await socketStateManager.clearSession(playerUserId, socket.id);
+            }, 5000);
+            
+            return true;
+        }
+        
+        // Unknown state - clean up
+        console.log(`[Disconnect] Unknown room status ${playerRoom.status}, cleaning up`);
+        await socketStateManager.clearSession(playerUserId, socket.id);
+        return false;
     }
 
     // Broadcast room list to all clients (chỉ hiển thị public rooms)
@@ -1534,7 +1821,7 @@ class GameHandler {
     }
 
     // Request room info (for lobby page when redirected after creating/joining)
-    requestRoomInfo(socket, data) {
+    async requestRoomInfo(socket, data) {
         const { roomCode, userId, username } = data;
         
         if (!roomCode) {
@@ -1567,6 +1854,11 @@ class GameHandler {
             console.log(`[Lobby] User ${username} not in room ${targetRoomId}`);
             return socket.emit('room:error', { message: 'You are not in this room' });
         }
+        
+        // ✅ FIX PATH 2: Register socket FIRST (Redis single source of truth)
+        console.log(`[Lobby] 🔧 [PATH 2] Registering socket BEFORE room join for ${username}`);
+        await socketStateManager.registerSocket(userId, socket.id, targetRoomId);
+        await socketStateManager.updateRoomStatus(userId, targetRoomId, targetRoom.status);
         
         // Update socket ID for reconnection (important for navigation between pages)
         if (isPlayer1) {
@@ -1674,7 +1966,7 @@ class GameHandler {
     }
     
     // Join game room (when navigating to game.html)
-    joinGameRoom(socket, data) {
+    async joinGameRoom(socket, data) {
         const { roomCode, userId, username } = data;
         const resolvedUserId = userId || socket.userId;
         
@@ -1699,23 +1991,66 @@ class GameHandler {
                 break;
             }
         }
-        
+
+        if (!targetRoom) {
+            const restored = await this.getGameByIdentifier(roomCode);
+            if (restored) {
+                targetRoomId = restored.roomId;
+                targetRoom = rooms.get(targetRoomId) || null;
+            }
+        }
+
         if (!targetRoom) {
             console.error(`[GameHandler] ❌ Room not found: ${roomCode}`);
             console.error(`[GameHandler] Available rooms:`, Array.from(rooms.keys()));
-            return socket.emit('room:error', { message: 'Room not found' });
+            console.log(`[GameHandler] 💡 Room may have ended - checking game history...`);
+            
+            // Check if room ended (game over)
+            const gameRecord = await this.getGameByIdentifier(roomCode);
+            if (gameRecord && gameRecord.gameState === 'finished') {
+                console.log(`[GameHandler] 🏁 Game already ended in room ${roomCode}`);
+                return socket.emit('game:already_ended', { 
+                    message: 'Game has already ended',
+                    winner: gameRecord.winner,
+                    roomId: roomCode
+                });
+            }
+            
+            return socket.emit('room:error', { message: 'Room not found or has ended' });
         }
         
+        // ✅ CRITICAL FIX: Register socket in Redis FIRST (before join/emit)
         if (resolvedUserId) {
+            console.log(`[GameHandler] 🔧 Registering socket BEFORE join/emit...`);
+            
+            // 1. Register in Redis (sets connected=true, deletes disconnectAt)
+            await socketStateManager.registerSocket(resolvedUserId, socket.id, targetRoomId);
+            await socketStateManager.updateRoomStatus(resolvedUserId, targetRoomId, targetRoom.status);
+            
+            // 2. Clear any disconnect timers (user reconnected)
+            if (targetRoom.disconnectTimer) {
+                console.log(`[GameHandler] ✅ Clearing disconnect timer - user reconnected`);
+                clearTimeout(targetRoom.disconnectTimer);
+                delete targetRoom.disconnectTimer;
+            }
+            
+            // 3. Update room player data
             if (targetRoom.player1 && targetRoom.player1.userId === resolvedUserId) {
                 targetRoom.player1.socketId = socket.id;
+                targetRoom.player1.disconnected = false;
+                delete targetRoom.player1.disconnectTime;
             } else if (targetRoom.player2 && targetRoom.player2.userId === resolvedUserId) {
                 targetRoom.player2.socketId = socket.id;
+                targetRoom.player2.disconnected = false;
+                delete targetRoom.player2.disconnectTime;
             }
+            
             playerSockets.set(resolvedUserId, socket.id);
+            
+            console.log(`[GameHandler] ✅ Redis updated BEFORE join (connected=true)`);
         }
 
-        // Join the socket room
+        // NOW safe to join room and emit events
         socket.join(targetRoomId);
         console.log(`[GameHandler] ✅ Socket ${socket.id} joined room ${targetRoomId}`);
         
@@ -1990,6 +2325,76 @@ class GameHandler {
         });
 
         return board;
+    }
+
+    // Create minimal game record and end with winner (for deployment disconnect)
+    createGameAndEndWithWinner(roomId, room, winnerId, reason = 'disconnect') {
+        console.log(`[GameHandler] Creating game record for ${reason} win in room ${roomId}`);
+        
+        const winner = room.player1.userId === winnerId ? room.player1 : room.player2;
+        const loser = room.player1.userId === winnerId ? room.player2 : room.player1;
+
+        // Save game to database
+        const gameRecord = {
+            roomId,
+            player1Id: room.player1.userId,
+            player1Username: room.player1.username,
+            player1IsGuest: room.player1.isGuest || false,
+            player1DisplayName: room.player1.guestDisplayName || room.player1.displayName || null,
+            player2Id: room.player2.userId,
+            player2Username: room.player2.username,
+            player2IsGuest: room.player2.isGuest || false,
+            player2DisplayName: room.player2.guestDisplayName || room.player2.displayName || null,
+            winnerId,
+            winnerUsername: winner.username,
+            duration: 0, // No actual gameplay time
+            startTime: Date.now(),
+            endedAt: new Date().toISOString(),
+            reason: reason
+        };
+
+        Database.createGame(gameRecord).catch(err => {
+            console.error('Error saving game to database:', err);
+        });
+
+        // Normalize characterId
+        const normalizeCharacterId = (charId) => {
+            if (typeof charId === 'number') {
+                return `character${charId + 1}`;
+            }
+            if (typeof charId === 'string' && charId.startsWith('character')) {
+                return charId;
+            }
+            if (typeof charId === 'string' && !isNaN(parseInt(charId))) {
+                return `character${parseInt(charId) + 1}`;
+            }
+            return 'character1';
+        };
+
+        // Emit game_over event
+        this.io.to(roomId).emit('game_over', {
+            winner: {
+                userId: winner.userId,
+                username: winner.username,
+                characterId: normalizeCharacterId(winner.characterId)
+            },
+            loser: {
+                userId: loser.userId,
+                username: loser.username,
+                characterId: normalizeCharacterId(loser.characterId)
+            },
+            reason: reason,
+            message: `${winner.username} thắng do ${loser.username} mất kết nối!`
+        });
+
+        // Clean up room AFTER a short delay to ensure client receives game_over event
+        setTimeout(() => {
+            this.clearGameState(roomId, room.code || null);
+            rooms.delete(roomId);
+            console.log(`[GameHandler] ✅ Room ${roomId} cleaned up after game_over`);
+        }, 2000); // 2 second delay
+        
+        console.log(`[GameHandler] ✅ Game ended in room ${roomId} - Winner: ${winner.username} (${reason})`);
     }
 }
 

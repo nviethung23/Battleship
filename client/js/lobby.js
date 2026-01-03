@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check authentication
     if (!BattleshipState.isAuthenticated()) {
         console.error('[Lobby] Not authenticated, redirecting to login');
-        window.location.href = '/';
+        BattleshipState.redirectToLogin('Vui lòng đăng nhập lại');
         return;
     }
 

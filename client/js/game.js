@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check authentication
     if (!BattleshipState.isAuthenticated()) {
         console.error('[Game.js] No token found, redirecting to login');
-        window.location.href = '/';
+        BattleshipState.redirectToLogin('Session hết hạn, vui lòng đăng nhập lại');
         return;
     }
 
@@ -327,6 +327,26 @@ function setupSocketHandlers(socket) {
         backToHub();
     });
 
+    // Game already ended (trying to rejoin finished game)
+    socket.on('game:already_ended', (data) => {
+        console.log('[Game] 🏁 Game already ended:', data);
+        SocketShared.showNotification('Trận đấu đã kết thúc', 'info');
+        BattleshipState.clearRoomState();
+        setTimeout(() => {
+            window.location.href = '/hub';
+        }, 1500);
+    });
+
+    // Room disbanded (host left, etc)
+    socket.on('room:disbanded', (data) => {
+        console.log('[Game] 🚪 Room disbanded:', data);
+        SocketShared.showNotification(data.reason || 'Phòng đã bị đóng', 'warning');
+        BattleshipState.clearRoomState();
+        setTimeout(() => {
+            window.location.href = '/hub';
+        }, 1500);
+    });
+
     // Receive actual roomId for chat/webrtc
     socket.on('room:actualRoomId', (data) => {
         console.log('[Game] 📍 Received actual roomId:', data);
@@ -337,7 +357,7 @@ function setupSocketHandlers(socket) {
     
     // Deployment timer update from server (SHARED TIMER)
     socket.on('deployment_timer_update', (data) => {
-        console.log('[Game] 🕐 Deployment timer update from server:', data.timeRemaining);
+        // console.log('[Game] 🕐 Deployment timer update from server:', data.timeRemaining);
         updateDeploymentTimerFromServer(data.timeRemaining);
     });
     
@@ -405,23 +425,19 @@ function setupSocketHandlers(socket) {
         handleGameOver(data);
     });
 
-    // Player disconnected
-    socket.on('player_disconnected', (data) => {
-        console.log('[Game] Player disconnected:', data);
-        handlePlayerDisconnected(data);
-    });
-
-    // Player reconnecting (grace period started)
-    socket.on('player_reconnecting', (data) => {
-        console.log('[Game] Player reconnecting:', data);
-        showReconnectingOverlay(data.username, data.gracePeriod);
+    // Player disconnected (grace period started)
+    socket.on('player:disconnected', (data) => {
+        console.log('[Game] ⚠️ Player disconnected, showing reconnect overlay:', data);
+        if (data.gracePeriod) {
+            showReconnectingOverlay(data.message, data.gracePeriod);
+        }
     });
 
     // Player reconnected (clear reconnecting state)
-    socket.on('player_reconnected', (data) => {
-        console.log('[Game] Player reconnected:', data);
+    socket.on('player:reconnected', (data) => {
+        console.log('[Game] ✅ Player reconnected:', data);
         hideReconnectingOverlay();
-        SocketShared.showNotification(`${data.username} đã kết nối lại!`, 'success');
+        SocketShared.showNotification('Đối thủ đã kết nối lại!', 'success');
     });
 
     // Player disconnect timeout (opponent wins)
@@ -429,6 +445,27 @@ function setupSocketHandlers(socket) {
         console.log('[Game] Player disconnect timeout:', data);
         hideReconnectingOverlay();
         SocketShared.showNotification(data.message, 'warning');
+        
+        // Trigger game over screen if we have winner/disconnectedPlayer data
+        if (data.winner && data.disconnectedPlayer) {
+            // Wait a bit for notification to be visible
+            setTimeout(() => {
+                handleGameOver({
+                    winner: {
+                        username: data.winner,
+                        userId: data.winnerId || null,
+                        characterId: data.winnerCharacterId || 'character1'
+                    },
+                    loser: {
+                        username: data.disconnectedPlayer,
+                        userId: data.loserId || null,
+                        characterId: data.loserCharacterId || 'character1'
+                    },
+                    reason: 'disconnect',
+                    message: data.message
+                });
+            }, 1500);
+        }
     });
 
     // Turn timeout
@@ -832,6 +869,9 @@ function handleAttack(row, col) {
 }
 
 function showGameOverScreen() {
+    // ✅ Ensure reconnecting overlay is hidden
+    hideReconnectingOverlay();
+    
     hideAllScreens();
     document.getElementById('gameOverScreen').style.display = 'block';
 }
@@ -1669,6 +1709,11 @@ function handleShipCellDragEnd(e) {
         highlightShip(shipName, false);
     }
     gameState.placementMode.draggedShip = null;
+    
+    // Clear ghost preview and drag state
+    if (typeof window.ShipDock !== 'undefined') {
+        window.ShipDock.clearDrag();
+    }
 }
 
 // Handle drop event
@@ -2080,6 +2125,9 @@ function handleTurnContinue(data) {
 
 function handleGameOver(data) {
     console.log('[Game] 🏆 Game over:', data);
+    
+    // ✅ Hide reconnecting overlay if it's showing
+    hideReconnectingOverlay();
     
     // Clear battle state on game over
     clearBattleState();
@@ -2763,8 +2811,8 @@ function showTurnNotification(isMyTurn, delay = 0) {
 function handleBattleGameOver(data) {
     console.log('[Game] 🏆 Game over:', data);
     const myUserId = BattleshipState.getUserId();
-    const isWinner = data.winnerId === myUserId;
-    console.log('[Game] Am I winner?', isWinner, '(winnerId:', data.winnerId, ', myUserId:', myUserId, ')');
+    const isWinner = data.winner?.userId === myUserId;
+    console.log('[Game] Am I winner?', isWinner, '(winner.userId:', data.winner?.userId, ', myUserId:', myUserId, ')');
     
     // Show notification
     SocketShared.showNotification(
@@ -2808,25 +2856,26 @@ function updateGameOverScreen(data, isWinner) {
     }
     
     // Get character info directly from game_over data
-    // Server sends: winner, winnerId, winnerCharacterId, loser, loserId, loserCharacterId
-    // Note: characterId can be a number (index 0,1,2) or string ('character1','character2','character3')
+    // Server sends: winner: {userId, username, characterId}, loser: {userId, username, characterId}
     let myCharacterId = 'character1';
     let opponentCharacterId = 'character1';
     let myUsername = 'Player';
     let opponentUsername = 'Opponent';
     
+    const myUserId = BattleshipState.getUserId();
+    
     if (isWinner) {
         // I won
-        myCharacterId = normalizeCharacterId(data.winnerCharacterId);
-        myUsername = data.winner || 'Player';
-        opponentCharacterId = normalizeCharacterId(data.loserCharacterId);
-        opponentUsername = data.loser || 'Opponent';
+        myCharacterId = normalizeCharacterId(data.winner?.characterId);
+        myUsername = data.winner?.username || 'Player';
+        opponentCharacterId = normalizeCharacterId(data.loser?.characterId);
+        opponentUsername = data.loser?.username || 'Opponent';
     } else {
         // I lost
-        myCharacterId = normalizeCharacterId(data.loserCharacterId);
-        myUsername = data.loser || 'Player';
-        opponentCharacterId = normalizeCharacterId(data.winnerCharacterId);
-        opponentUsername = data.winner || 'Opponent';
+        myCharacterId = normalizeCharacterId(data.loser?.characterId);
+        myUsername = data.loser?.username || 'Player';
+        opponentCharacterId = normalizeCharacterId(data.winner?.characterId);
+        opponentUsername = data.winner?.username || 'Opponent';
     }
     
     console.log('[Game] My character:', myCharacterId, 'Opponent:', opponentCharacterId);

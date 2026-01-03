@@ -21,9 +21,67 @@ const configuration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' }
+        { urls: 'stun:stun2.l.google.com:19302' },
+        {
+            urls: [
+                'turn:turn.your-domain.com:3478?transport=udp',
+                'turn:turn.your-domain.com:3478?transport=tcp',
+                'turns:turn.your-domain.com:5349?transport=tcp'
+            ],
+            username: 'TURN_USERNAME',
+            credential: 'TURN_PASSWORD'
+        }
     ]
 };
+
+async function requestMediaStream() {
+    const preferredConstraints = {
+        video: {
+            facingMode: { ideal: 'user' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        },
+        audio: true
+    };
+
+    try {
+        return await navigator.mediaDevices.getUserMedia(preferredConstraints);
+    } catch (error) {
+        console.warn('[WebRTC] Preferred constraints failed, retrying with default video:', error);
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    }
+}
+
+async function attachStreamToVideo(videoEl, stream, options = {}) {
+    if (!videoEl || !stream) return;
+
+    videoEl.srcObject = stream;
+    videoEl.autoplay = true;
+    videoEl.playsInline = true;
+    videoEl.muted = Boolean(options.muted);
+
+    try {
+        await videoEl.play();
+    } catch (error) {
+        console.warn('[WebRTC] Video play blocked:', error);
+    }
+}
+
+function getRemoteStreamFromTrackEvent(event) {
+    if (event && Array.isArray(event.streams) && event.streams[0]) {
+        return event.streams[0];
+    }
+
+    if (!remoteStream) {
+        remoteStream = new MediaStream();
+    }
+
+    if (event && event.track) {
+        remoteStream.addTrack(event.track);
+    }
+
+    return remoteStream;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initWebRTCUI();
@@ -119,16 +177,11 @@ async function startCall() {
         showNotification('Đang kết nối camera/mic...', 'info');
 
         // Get local media
-        localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
-        });
+        localStream = await requestMediaStream();
 
         // Display local video (preview)
         const localVideo = document.getElementById('battleLocalVideo') || document.getElementById('localVideo');
-        if (localVideo) {
-            localVideo.srcObject = localStream;
-        }
+        await attachStreamToVideo(localVideo, localStream, { muted: true });
 
         // Send call request FIRST - wait for acceptance before creating offer
         socket.emit('call_request', {
@@ -206,15 +259,13 @@ async function initiateWebRTCConnection() {
         };
 
         // Handle remote stream
-        peerConnection.ontrack = (event) => {
+        peerConnection.ontrack = async (event) => {
             console.log('[WebRTC CALLER] ontrack fired! Remote stream received');
             console.log('[WebRTC CALLER] Remote tracks:', event.streams[0]?.getTracks().length);
-            remoteStream = event.streams[0];
+            remoteStream = getRemoteStreamFromTrackEvent(event);
             const remoteVideo = document.getElementById('battleRemoteVideo') || document.getElementById('remoteVideo');
-            if (remoteVideo) {
-                remoteVideo.srcObject = remoteStream;
-                console.log('[WebRTC CALLER] Remote video element updated');
-            }
+            await attachStreamToVideo(remoteVideo, remoteStream);
+            console.log('[WebRTC CALLER] Remote video element updated');
         };
 
         // Connection state changes
@@ -292,16 +343,11 @@ async function processAcceptedCall() {
     try {
         // Get local media if not already
         if (!localStream) {
-            localStream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true
-            });
+            localStream = await requestMediaStream();
             console.log('[WebRTC CALLEE] Got local stream, tracks:', localStream.getTracks().length);
 
             const localVideo = document.getElementById('battleLocalVideo') || document.getElementById('localVideo');
-            if (localVideo) {
-                localVideo.srcObject = localStream;
-            }
+            await attachStreamToVideo(localVideo, localStream, { muted: true });
         }
 
         // Create peer connection if not already
@@ -334,15 +380,13 @@ async function processAcceptedCall() {
             };
 
             // Handle remote stream
-            peerConnection.ontrack = (event) => {
+            peerConnection.ontrack = async (event) => {
                 console.log('[WebRTC CALLEE] ontrack fired! Remote stream received');
                 console.log('[WebRTC CALLEE] Remote tracks:', event.streams[0]?.getTracks().length);
-                remoteStream = event.streams[0];
+                remoteStream = getRemoteStreamFromTrackEvent(event);
                 const remoteVideo = document.getElementById('battleRemoteVideo') || document.getElementById('remoteVideo');
-                if (remoteVideo) {
-                    remoteVideo.srcObject = remoteStream;
-                    console.log('[WebRTC CALLEE] Remote video element updated');
-                }
+                await attachStreamToVideo(remoteVideo, remoteStream);
+                console.log('[WebRTC CALLEE] Remote video element updated');
             };
             
             // Connection state changes
@@ -829,6 +873,19 @@ function updateCallButtons() {
     }
 }
 
+async function resumeCallVideoPlayback() {
+    const localVideo = document.getElementById('battleLocalVideo') || document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('battleRemoteVideo') || document.getElementById('remoteVideo');
+
+    if (localVideo && localStream) {
+        await attachStreamToVideo(localVideo, localStream, { muted: true });
+    }
+
+    if (remoteVideo && remoteStream) {
+        await attachStreamToVideo(remoteVideo, remoteStream);
+    }
+}
+
 // Helper functions
 function getCurrentRoomId() {
     // First try actual roomId from server (for chat/webrtc to work properly)
@@ -882,3 +939,4 @@ window.handleCallRequest = handleCallRequest;
 window.handleCallAccepted = handleCallAccepted;
 window.handleCallRejected = handleCallRejected;
 window.handleCallEnded = handleCallEnded;
+window.resumeCallVideoPlayback = resumeCallVideoPlayback;

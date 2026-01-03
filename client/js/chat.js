@@ -154,6 +154,10 @@ function openChatPopupPanel() {
 
         // Load chat history if we have a room
         loadChatHistoryFromServer();
+
+        if (typeof window.resumeCallVideoPlayback === 'function') {
+            window.resumeCallVideoPlayback();
+        }
     }
 }
 

@@ -11,6 +11,7 @@ const HUB_CHARACTERS = [
 ];
 
 let selectedCharacterIndex = 0;
+const HUB_GUIDE_STORAGE_KEY = 'hubGuideHide';
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check authentication
     if (!BattleshipState.isAuthenticated()) {
         console.error('[Hub] Not authenticated, redirecting to login');
-        window.location.href = '/';
+        BattleshipState.redirectToLogin('Vui lòng đăng nhập lại');
         return;
     }
 
@@ -42,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize character switcher (UI-only cosmetic)
     initCharacterSwitcher();
+    initHubGuide();
 
     console.log('[Hub] Initialized successfully');
 });
@@ -306,6 +308,74 @@ function updateCharacterDisplay() {
             thumb.classList.remove('hub__thumb--active');
         }
     });
+}
+
+function initHubGuide() {
+    const overlay = document.getElementById('hubGuideOverlay');
+    if (!overlay) return;
+
+    const openBtn = document.getElementById('hubGuideOpenBtn');
+    const closeBtn = document.getElementById('hubGuideCloseBtn');
+    const startBtn = document.getElementById('hubGuideStartBtn');
+    const neverAgain = document.getElementById('hubGuideNeverAgain');
+
+    const showGuide = () => {
+        overlay.classList.add('is-visible');
+        overlay.setAttribute('aria-hidden', 'false');
+    };
+
+    const hideGuide = () => {
+        overlay.classList.remove('is-visible');
+        overlay.setAttribute('aria-hidden', 'true');
+    };
+
+    const applyPreference = () => {
+        if (!neverAgain) return;
+        if (neverAgain.checked) {
+            localStorage.setItem(HUB_GUIDE_STORAGE_KEY, '1');
+        } else {
+            localStorage.removeItem(HUB_GUIDE_STORAGE_KEY);
+        }
+    };
+
+    const handleClose = () => {
+        applyPreference();
+        hideGuide();
+    };
+
+    if (openBtn) {
+        openBtn.addEventListener('click', () => {
+            if (neverAgain) {
+                neverAgain.checked = localStorage.getItem(HUB_GUIDE_STORAGE_KEY) === '1';
+            }
+            showGuide();
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', handleClose);
+    }
+
+    if (startBtn) {
+        startBtn.addEventListener('click', handleClose);
+    }
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) {
+            handleClose();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && overlay.classList.contains('is-visible')) {
+            handleClose();
+        }
+    });
+
+    if (localStorage.getItem(HUB_GUIDE_STORAGE_KEY) !== '1') {
+        if (neverAgain) neverAgain.checked = false;
+        showGuide();
+    }
 }
 
 console.log('[Hub] Script loaded');

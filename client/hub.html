@@ -9,10 +9,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* Ensure Black Ops One loads immediately */
-        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&display=block');
-    </style>
     <!-- Stylesheets -->
     <link rel="stylesheet" href="css/style.css?v=2.3">
     <link rel="stylesheet" href="css/hub.css?v=2.3">
@@ -42,6 +38,10 @@
                                 <span class="hub__online-dot"></span>
                                 <span id="hubOnlineCount" class="hub__online-text">0 online</span>
                             </div>
+                            <button id="hubGuideOpenBtn" class="hub__help-btn" type="button" title="Hu?ng d?n">
+                                <span class="hub__help-icon">?</span>
+                                <span class="hub__help-text">Hướng dẫn</span>
+                            </button>
                             <button id="hubLogoutBtn" class="hub__logout-btn">
                                 <span class="hub__logout-icon">🚪</span>
                                 <span class="hub__logout-text">Đăng xuất</span>
@@ -150,6 +150,204 @@
                     <button id="btnCancelQueue" class="btn-cancel-queue">Huỷ tìm</button>
                 </div>
             </div>
+                        <!-- Hub Guide Overlay -->
+            <div id="hubGuideOverlay" class="hub-guide" aria-hidden="true">
+                <div class="hub-guide__card" role="dialog" aria-modal="true" aria-labelledby="hubGuideTitle">
+                    
+                    <!-- Header with Navy Theme -->
+                    <div class="hub-guide__navy-header">
+                        <div class="hub-guide__glow"></div>
+                        <div class="hub-guide__header-content">
+                            <div class="hub-guide__header-left">
+                                <div class="hub-guide__logo-badge">
+                                    <img src="images/logo.png" alt="Logo" class="hub-guide__logo-img">
+                                </div>
+                                <h2 id="hubGuideTitle" class="hub-guide__title">Hướng Dẫn Chơi</h2>
+                            </div>
+                            <button id="hubGuideCloseBtn" type="button" aria-label="Đóng" class="hub-guide__close-btn">×</button>
+                        </div>
+                    </div>
+
+                    <!-- Tabs Navigation with Sliding Indicator -->
+                    <div class="hub-guide__tabs">
+                        <button class="guide-tab-btn active" data-tab="modes">Chế Độ</button>
+                        <button class="guide-tab-btn" data-tab="placement">Đặt Tàu</button>
+                        <button class="guide-tab-btn" data-tab="gameplay">Chơi Game</button>
+                        <button class="guide-tab-btn" data-tab="tips">Mẹo</button>
+                        <div class="guide-tab-indicator"></div>
+                    </div>
+
+                    <!-- Body Content -->
+                    <div class="hub-guide__body">
+                        <div class="guide-tab-panels">
+                        
+                            <!-- Tab 1: Chế độ chơi -->
+                            <div class="guide-tab-panel active" data-tab="modes">
+                                <div style="display: grid; gap: 12px;">
+                                    
+                                    <div style="background: rgba(14, 165, 233, 0.08); padding: 16px; border-radius: 10px; border-left: 3px solid #0ea5e9; backdrop-filter: blur(10px);">
+                                        <div style="display: flex; align-items: start; gap: 12px;">
+                                            <div style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);">⚡</div>
+                                            <div>
+                                                <h4 style="margin: 0 0 6px 0; color: #5fa8d3; font-size: 14px; font-weight: 700;">Quick Play (Chơi Ngay)</h4>
+                                                <p style="margin: 0; color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.5;">Hệ thống tự động ghép bạn với người chơi khác. Vào lobby và bắt đầu chơi ngay.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: rgba(234, 179, 8, 0.08); padding: 16px; border-radius: 10px; border-left: 3px solid #eab308; backdrop-filter: blur(10px);">
+                                        <div style="display: flex; align-items: start; gap: 12px;">
+                                            <div style="background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); color: white; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);">🔒</div>
+                                            <div>
+                                                <h4 style="margin: 0 0 6px 0; color: #fbbf24; font-size: 14px; font-weight: 700;">Tạo Phòng Riêng</h4>
+                                                <p style="margin: 0; color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.5;">Tạo mã 6 ký tự (VD: ABC123) để mời bạn bè vào phòng của bạn.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: rgba(34, 197, 94, 0.08); padding: 16px; border-radius: 10px; border-left: 3px solid #22c55e; backdrop-filter: blur(10px);">
+                                        <div style="display: flex; align-items: start; gap: 12px;">
+                                            <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">🤝</div>
+                                            <div>
+                                                <h4 style="margin: 0 0 6px 0; color: #4ade80; font-size: 14px; font-weight: 700;">Tham Gia Phòng</h4>
+                                                <p style="margin: 0; color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.5;">Nhập mã 6 ký tự để vào phòng của bạn bè.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <!-- Tab 2: Đặt Tàu -->
+                            <div class="guide-tab-panel" data-tab="placement" style="display: none;">
+                                <div style="display: grid; gap: 12px;">
+                                    
+                                    <div style="background: rgba(168, 85, 247, 0.08); padding: 14px; border-radius: 10px; border-left: 3px solid #a855f7;">
+                                        <h4 style="margin: 0 0 6px 0; color: #c084fc; font-size: 13px; font-weight: 700;">Kéo & Thả</h4>
+                                        <p style="margin: 0; color: rgba(255,255,255,0.65); font-size: 11px; line-height: 1.5;">Click giữ tàu → Kéo lên bảng 10×10 → Thả để đặt</p>
+                                    </div>
+
+                                    <div style="background: rgba(239, 68, 68, 0.08); padding: 14px; border-radius: 10px; border-left: 3px solid #ef4444;">
+                                        <h4 style="margin: 0 0 6px 0; color: #f87171; font-size: 13px; font-weight: 700;">Xoay Tàu (Phím R)</h4>
+                                        <p style="margin: 0; color: rgba(255,255,255,0.65); font-size: 11px; line-height: 1.5;">Nhấn <span style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600;">R</span> khi kéo → Tàu xoay ngang/dọc</p>
+                                    </div>
+
+                                    <div style="background: rgba(168, 85, 247, 0.08); padding: 14px; border-radius: 10px; border-left: 3px solid #a855f7;">
+                                        <h4 style="margin: 0 0 8px 0; color: #c084fc; font-size: 13px; font-weight: 700;">Nút Tiện Ích</h4>
+                                        <div style="display: grid; gap: 4px; font-size: 11px; color: rgba(255,255,255,0.7);">
+                                            <div>• <strong>Random:</strong> Đặt ngẫu nhiên</div>
+                                            <div>• <strong>Reset:</strong> Xóa hết</div>
+                                            <div>• <strong>Deploy:</strong> Hoàn thành</div>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: rgba(234, 179, 8, 0.08); padding: 14px; border-radius: 10px; border-left: 3px solid #eab308;">
+                                        <h4 style="margin: 0 0 6px 0; color: #fbbf24; font-size: 13px; font-weight: 700;">5 Loại Tàu</h4>
+                                        <div style="font-size: 10px; color: rgba(255,255,255,0.65); line-height: 1.6;">
+                                            Carrier (5 ô) • Battleship (4 ô) • Cruiser (3 ô)<br>
+                                            Submarine (3 ô) • Destroyer (2 ô)
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <!-- Tab 3: Chơi Game -->
+                            <div class="guide-tab-panel" data-tab="gameplay" style="display: none;">
+                                <div style="display: grid; gap: 10px;">
+                                    
+                                    <div style="background: rgba(239, 68, 68, 0.08); padding: 12px; border-radius: 8px; display: flex; gap: 10px; border-left: 3px solid #ef4444;">
+                                        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; flex-shrink: 0;">1</div>
+                                        <div>
+                                            <h4 style="margin: 0 0 3px 0; color: #f87171; font-size: 12px; font-weight: 700;">Lượt của Bạn</h4>
+                                            <p style="margin: 0; color: rgba(255,255,255,0.65); font-size: 10px;">Click ô trên bảng đối thủ → HIT hoặc MISS</p>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: rgba(234, 179, 8, 0.08); padding: 12px; border-radius: 8px; display: flex; gap: 10px; border-left: 3px solid #eab308;">
+                                        <div style="background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); color: white; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; flex-shrink: 0;">2</div>
+                                        <div>
+                                            <h4 style="margin: 0 0 3px 0; color: #fbbf24; font-size: 12px; font-weight: 700;">Trúng (HIT)</h4>
+                                            <p style="margin: 0; color: rgba(255,255,255,0.65); font-size: 10px;">Ô đỏ → Bắn thêm lượt → Tiếp tục đến khi trượt</p>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: rgba(14, 165, 233, 0.08); padding: 12px; border-radius: 8px; display: flex; gap: 10px; border-left: 3px solid #0ea5e9;">
+                                        <div style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; flex-shrink: 0;">3</div>
+                                        <div>
+                                            <h4 style="margin: 0 0 3px 0; color: #5fa8d3; font-size: 12px; font-weight: 700;">Trượt (MISS)</h4>
+                                            <p style="margin: 0; color: rgba(255,255,255,0.65); font-size: 10px;">Ô xám → Đổi lượt cho đối thủ</p>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: rgba(168, 85, 247, 0.08); padding: 12px; border-radius: 8px; display: flex; gap: 10px; border-left: 3px solid #a855f7;">
+                                        <div style="background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); color: white; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; flex-shrink: 0;">4</div>
+                                        <div>
+                                            <h4 style="margin: 0 0 3px 0; color: #c084fc; font-size: 12px; font-weight: 700;">Chìm Tàu</h4>
+                                            <p style="margin: 0; color: rgba(255,255,255,0.65); font-size: 10px;">Bắn trúng hết ô → Tàu chìm → Gạch ngang</p>
+                                        </div>
+                                    </div>
+
+                                    <div style="background: rgba(34, 197, 94, 0.08); padding: 12px; border-radius: 8px; display: flex; gap: 10px; border-left: 3px solid #22c55e;">
+                                        <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; flex-shrink: 0;">5</div>
+                                        <div>
+                                            <h4 style="margin: 0 0 3px 0; color: #4ade80; font-size: 12px; font-weight: 700;">Chiến Thắng</h4>
+                                            <p style="margin: 0; color: rgba(255,255,255,0.65); font-size: 10px;">Chìm hết 5 tàu đối thủ = Bạn thắng!</p>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <!-- Tab 4: Mẹo & Chiến Lược -->
+                            <div class="guide-tab-panel" data-tab="tips" style="display: none;">
+                                <div style="display: grid; gap: 12px;">
+                                    
+                                    <div style="background: rgba(95, 168, 211, 0.08); padding: 14px; border-radius: 10px; border-left: 3px solid #5fa8d3;">
+                                        <h4 style="margin: 0 0 8px 0; color: #5fa8d3; font-size: 13px; font-weight: 700;">🎯 Đặt Tàu Thông Minh</h4>
+                                        <ul style="margin: 0; padding-left: 16px; font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.6;">
+                                            <li>Đặt tàu cách xa nhau</li>
+                                            <li>Tránh hàng ngang/dọc liên tục</li>
+                                            <li>Tàu nhỏ ở góc bản đồ</li>
+                                        </ul>
+                                    </div>
+
+                                    <div style="background: rgba(95, 168, 211, 0.08); padding: 14px; border-radius: 10px; border-left: 3px solid #5fa8d3;">
+                                        <h4 style="margin: 0 0 8px 0; color: #5fa8d3; font-size: 13px; font-weight: 700;">💡 Chiến Lược Bắn</h4>
+                                        <ul style="margin: 0; padding-left: 16px; font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.6;">
+                                            <li>Bắn theo hình vuông cách nhau</li>
+                                            <li>Khi trúng, bắn xung quanh</li>
+                                            <li>Chú ý tracker tàu</li>
+                                        </ul>
+                                    </div>
+
+                                    <div style="background: rgba(95, 168, 211, 0.08); padding: 14px; border-radius: 10px; border-left: 3px solid #5fa8d3;">
+                                        <h4 style="margin: 0 0 8px 0; color: #5fa8d3; font-size: 13px; font-weight: 700;">⏱️ Quản Lý Thời Gian</h4>
+                                        <ul style="margin: 0; padding-left: 16px; font-size: 11px; color: rgba(255,255,255,0.7); line-height: 1.6;">
+                                            <li>Mỗi lượt 60 giây</li>
+                                            <li>Bắn nhanh nhưng tỉnh táo</li>
+                                            <li>Theo dõi tracker liên tục</li>
+                                        </ul>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="hub-guide__footer">
+                        <label class="hub-guide__checkbox">
+                            <input type="checkbox" id="hubGuideNeverAgain">
+                            <span>Không hiển thị lần sau</span>
+                        </label>
+                        <button id="hubGuideStartBtn" type="button" class="hub-guide__start-btn">Bắt Đầu Chơi</button>
+                    </div>
+                    
+                </div>
+            </div>
+</div>
         </div>
     </div>
 
@@ -157,6 +355,46 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="js/shared/state.js"></script>
     <script src="js/shared/socket-shared.js"></script>
+    
+    <!-- Guide Tab Handler Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching for guide with indicator
+            const tabs = document.querySelectorAll('.guide-tab-btn');
+            const indicator = document.querySelector('.guide-tab-indicator');
+            const contents = document.querySelectorAll('.guide-tab-panel');
+            
+            if (!tabs.length) return;
+            
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', function() {
+                    const tabName = this.dataset.tab;
+                    
+                    // Update active states
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update indicator position
+                    if (indicator) {
+                        const position = (index * 100) / tabs.length;
+                        indicator.style.left = position + '%';
+                    }
+                    
+                    // Update panels
+                    contents.forEach(c => {
+                        c.classList.remove('active');
+                        c.style.display = 'none';
+                    });
+                    const activePanel = document.querySelector(`.guide-tab-panel[data-tab="${tabName}"]`);
+                    if (activePanel) {
+                        activePanel.classList.add('active');
+                        activePanel.style.display = 'block';
+                    }
+                });
+            });
+        });
+    </script>
+    
     <script src="js/hub.js"></script>
 </body>
 </html>

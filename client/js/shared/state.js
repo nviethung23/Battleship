@@ -110,9 +110,34 @@ const BattleshipState = {
         this.clearMode();
     },
 
-    // Check if authenticated
+    // Check if authenticated (with token expiry validation)
     isAuthenticated() {
-        return !!(this.getToken() && this.getUserId() && this.getUsername());
+        const token = this.getToken();
+        if (!token || !this.getUserId() || !this.getUsername()) {
+            return false;
+        }
+
+        try {
+            // Decode JWT to check expiry (without signature verification)
+            const parts = token.split('.');
+            if (parts.length !== 3) return false;
+
+            const payload = JSON.parse(atob(parts[1]));
+            const expiry = payload.exp * 1000; // Convert to ms
+
+            // Check if expired
+            if (Date.now() > expiry) {
+                console.warn('[Auth] Token expired');
+                this.clearAll();
+                return false;
+            }
+
+            return true;
+        } catch (e) {
+            console.error('[Auth] Token parse error:', e);
+            this.clearAll();
+            return false;
+        }
     },
 
     // Clear all state (logout)
@@ -127,6 +152,14 @@ const BattleshipState = {
         localStorage.removeItem('isGuest');
         localStorage.removeItem('guestDisplayName');
         localStorage.removeItem(this.KEYS.ROOM_CODE);
+    },
+
+    // Redirect to login with message
+    redirectToLogin(reason = 'Session expired') {
+        console.warn('[Auth] Redirecting to login:', reason);
+        this.clearAll();
+        const msg = encodeURIComponent(reason);
+        window.location.href = `/?msg=${msg}`;
     },
 
     // Sync from localStorage to sessionStorage (for initial page load)

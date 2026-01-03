@@ -13,6 +13,7 @@ const rateLimit = require('express-rate-limit');
 
 // Import MongoDB connection
 const { connectDB } = require('./config/mongodb');
+const { initRedis } = require('./config/redis');
 
 // Import controllers and handlers
 const { register, login, guestLogin, getProfile } = require('./controllers/authController');
@@ -340,7 +341,7 @@ io.on('connection', (socket) => {
         console.log(`User disconnected: ${socket.username} (${socket.id})`);
         
         // Handle game disconnect (this sets up grace period for battle)
-        const isInGame = gameHandler.handleDisconnect(socket);
+        const isInGame = await gameHandler.handleDisconnect(socket);
         
         // Nếu là guest và KHÔNG trong game, xóa khỏi database
         // Nếu đang trong game, đợi grace period kết thúc
@@ -372,6 +373,10 @@ const PORT = process.env.PORT || 3000;
 // Connect to MongoDB before starting server
 connectDB()
     .then(() => {
+        initRedis().catch((error) => {
+            console.warn('[Redis] Init skipped:', error.message || error);
+        });
+
         server.listen(PORT, () => {
             console.log(`✓ Server running on port ${PORT}`);
         });
@@ -394,4 +399,5 @@ connectDB()
         console.error('Failed to start server:', error);
         process.exit(1);
     });
+
 

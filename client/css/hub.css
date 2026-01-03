@@ -228,6 +228,40 @@ body {
     color: #e2e8f0;
 }
 
+.hub__help-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.hub__help-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.hub__help-icon {
+    font-size: 14px;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(95, 168, 197, 0.2);
+    color: #dbeafe;
+}
+
 /* Content Grid - 2 columns for left and right */
 .hub__content-grid {
     display: grid;
@@ -658,6 +692,532 @@ body {
     margin: 0;
 }
 
+/* Hub Guide Overlay */
+.hub-guide {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    padding: 20px;
+}
+
+.hub-guide.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.hub-guide__card {
+    background: rgba(20, 30, 45, 0.75);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 20px;
+    max-width: 680px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    overflow: hidden;
+    animation: slideInGuide 0.5s ease-out;
+}
+
+/* Header with Navy Theme */
+.hub-guide__navy-header {
+    background: linear-gradient(135deg, rgba(26, 35, 50, 0.85) 0%, rgba(44, 62, 80, 0.85) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(95, 168, 211, 0.2);
+}
+
+.hub-guide__glow {
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(95,168,211,0.2) 0%, rgba(26,127,191,0.1) 40%, transparent 70%);
+    pointer-events: none;
+    animation: glowPulse 3s ease-in-out infinite;
+}
+
+.hub-guide__header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.hub-guide__header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hub-guide__logo-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hub-guide__logo-img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(95, 168, 211, 0.6));
+    transition: all 0.3s ease;
+    animation: float 3s ease-in-out infinite;
+}
+
+.hub-guide__logo-img:hover {
+    transform: scale(1.15) rotate(10deg);
+    filter: drop-shadow(0 8px 20px rgba(95, 168, 211, 0.8));
+}
+
+.hub-guide__title {
+    color: white;
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    text-shadow: 0 2px 10px rgba(95, 168, 211, 0.3);
+}
+
+.hub-guide__close-btn {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.9);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.hub-guide__close-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.hub-guide__close-btn:hover {
+    background: rgba(255,255,255,0.2);
+    transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+}
+
+.hub-guide__close-btn:hover::before {
+    opacity: 1;
+}
+
+/* Tabs Navigation */
+.hub-guide__tabs {
+    position: relative;
+    display: flex;
+    background: rgba(26, 35, 50, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.guide-tab-btn {
+    flex: 1;
+    padding: 16px 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: rgba(255,255,255,0.4);
+    font-size: 13px;
+    transition: all 0.3s ease;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    position: relative;
+}
+
+.guide-tab-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(95, 168, 211, 0.1), rgba(26, 127, 191, 0.1));
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.guide-tab-btn.active {
+    color: #5fa8d3;
+    text-shadow: 0 0 10px rgba(95, 168, 211, 0.5);
+}
+
+.guide-tab-btn.active::before {
+    opacity: 1;
+}
+
+.guide-tab-btn:hover {
+    color: #5fa8d3;
+    transform: translateY(-2px);
+}
+
+.guide-tab-btn:hover::before {
+    opacity: 1;
+}
+
+.guide-tab-indicator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #5fa8d3 0%, #1a7fbf 100%);
+    width: 25%;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 0 15px rgba(95, 168, 211, 0.8), 0 0 30px rgba(95, 168, 211, 0.4);
+    border-radius: 3px 3px 0 0;
+}
+
+/* Body Content */
+.hub-guide__body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 400px;
+    background: rgba(15, 20, 25, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    position: relative;
+}
+
+.hub-guide__body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.hub-guide__body::-webkit-scrollbar-track {
+    background: rgba(26, 35, 50, 0.5);
+    border-radius: 10px;
+}
+
+.hub-guide__body::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #5fa8d3, #1a7fbf);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(95, 168, 211, 0.5);
+}
+
+.hub-guide__body::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #6bb8e3, #2a8fcf);
+    box-shadow: 0 0 15px rgba(95, 168, 211, 0.8);
+}
+
+.guide-tab-panels {
+    position: relative;
+    overflow: hidden;
+}
+
+.guide-tab-panel {
+    display: none;
+    animation: slideInTab 0.4s ease-out;
+}
+
+.guide-tab-panel.active {
+    display: block;
+}
+
+/* Footer */
+.hub-guide__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: rgba(26, 35, 50, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(95, 168, 211, 0.2);
+}
+
+.hub-guide__checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.hub-guide__checkbox input {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.hub-guide__start-btn {
+    background: linear-gradient(135deg, #5fa8d3 0%, #1a7fbf 100%);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(95, 168, 211, 0.3);
+    font-family: 'Be Vietnam Pro', sans-serif;
+    position: relative;
+    overflow: hidden;
+}
+
+.hub-guide__start-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.hub-guide__start-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(95, 168, 211, 0.5), 0 0 30px rgba(95, 168, 211, 0.3);
+}
+
+.hub-guide__start-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.hub-guide__start-btn:active {
+    transform: translateY(-1px) scale(1.02);
+}
+
+/* Animations */
+@keyframes slideInGuide {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes slideInTab {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes glowPulse {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+
+/* Old guide styles (keeping for backward compatibility) */
+.hub-guide__header {
+    position: fixed;
+    inset: 0;
+    z-index: 180;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(5, 12, 24, 0.75);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.hub-guide.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.hub-guide__card {
+    width: min(720px, 92vw);
+    max-height: min(760px, 88vh);
+    overflow-y: auto;
+    background: linear-gradient(160deg, rgba(17, 34, 64, 0.92), rgba(8, 16, 32, 0.95));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    padding: 24px;
+    color: #e2e8f0;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.hub-guide__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.hub-guide__header h2 {
+    margin: 0;
+    font-family: 'Black Ops One', system-ui;
+    font-size: 1.6rem;
+    letter-spacing: 1px;
+}
+
+.hub-guide__close {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s ease;
+}
+
+.hub-guide__close:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+}
+
+.hub-guide__body {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.hub-guide__step {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+}
+
+.hub-guide__badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--cyan-500), var(--navy-700));
+    box-shadow: 0 6px 16px rgba(95, 168, 197, 0.35);
+}
+
+.hub-guide__text h3 {
+    margin: 0 0 4px 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.hub-guide__text p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--slate-300);
+}
+
+.hub-guide__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.hub-guide__checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--slate-200);
+}
+
+.hub-guide__checkbox input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--cyan-500);
+}
+
+.hub-guide__start {
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--cyan-500) 0%, var(--cyan-400) 100%);
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(95, 168, 197, 0.35);
+    transition: all 0.2s ease;
+}
+
+.hub-guide__start:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(95, 168, 197, 0.45);
+}
+
+.hub-guide__note {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--slate-400);
+}
+
 /* Queue/Searching Overlay */
 .queue-overlay {
     position: fixed;
@@ -732,6 +1292,43 @@ body {
 
 /* ======== RESPONSIVE DESIGN ======== */
 
+/* Large Laptops (1440px) */
+@media (max-width: 1440px) {
+    .hub-guide__card {
+        max-width: 640px;
+    }
+    
+    .hub-guide__body {
+        max-height: 380px;
+    }
+}
+
+/* Medium Laptops (1366px) */
+@media (max-width: 1366px) {
+    .hub-guide__card {
+        max-width: 600px;
+    }
+    
+    .hub-guide__title {
+        font-size: 20px;
+    }
+    
+    .guide-tab-btn {
+        font-size: 12px;
+        padding: 14px 8px;
+    }
+    
+    .hub-guide__body {
+        max-height: 360px;
+        padding: 18px;
+    }
+    
+    .hub-guide__start-btn {
+        font-size: 12px;
+        padding: 9px 20px;
+    }
+}
+
 /* Tablets (1024px) */
 @media (max-width: 1024px) {
     .hub__container {
@@ -768,6 +1365,25 @@ body {
     
     .hub__btn {
         padding: 20px 28px;
+    }
+    
+    /* Guide adjustments for tablets */
+    .hub-guide__card {
+        max-width: 560px;
+    }
+    
+    .hub-guide__title {
+        font-size: 19px;
+    }
+    
+    .guide-tab-btn {
+        font-size: 11px;
+        padding: 12px 6px;
+    }
+    
+    .hub-guide__body {
+        max-height: 340px;
+        padding: 16px;
     }
 }
 
@@ -811,6 +1427,14 @@ body {
     .hub__logout-btn {
         padding: 8px 12px;
         font-size: 12px;
+    }
+
+    .hub__help-btn {
+        padding: 8px 10px;
+    }
+
+    .hub__help-text {
+        display: none;
     }
 
     .hub__title {
@@ -862,6 +1486,17 @@ body {
         gap: 10px;
         padding: 12px;
     }
+
+    .hub__actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .hub__online-chip {
+        width: 100%;
+        justify-content: center;
+    }
     
     .hub__user-chip {
         width: 100%;
@@ -869,6 +1504,11 @@ body {
     }
     
     .hub__logout-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .hub__help-btn {
         width: 100%;
         justify-content: center;
     }
@@ -938,6 +1578,28 @@ body {
     .hub__join-btn {
         padding: 14px 20px;
         font-size: 15px;
+    }
+
+    .hub-guide__card {
+        padding: 18px;
+    }
+
+    .hub-guide__header h2 {
+        font-size: 1.3rem;
+    }
+
+    .hub-guide__step {
+        grid-template-columns: 28px 1fr;
+    }
+
+    .hub-guide__badge {
+        width: 26px;
+        height: 26px;
+        font-size: 0.8rem;
+    }
+
+    .hub-guide__text p {
+        font-size: 0.85rem;
     }
 }
 
