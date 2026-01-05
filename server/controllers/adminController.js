@@ -1,23 +1,35 @@
 const Database = require('../config/database');
 
-// Get all users
+// Get all users (with stats in one query)
 const getAllUsers = async (req, res) => {
     try {
         const users = await Database.getUsers();
         
-        // Remove passwords from response
-        const safeUsers = users.map(user => ({
-            id: user._id || user.id,
-            username: user.username,
-            email: user.email,
-            role: user.role || 'user',
-            createdAt: user.createdAt
+        // Get all stats in parallel
+        const usersWithStats = await Promise.all(users.map(async (user) => {
+            const userId = user._id || user.id;
+            let stats = { totalGames: 0, wins: 0, losses: 0, winRate: 0 };
+            
+            try {
+                stats = await Database.getUserStats(userId.toString());
+            } catch (e) {
+                // Keep default stats if error
+            }
+            
+            return {
+                id: userId,
+                username: user.username,
+                email: user.email,
+                role: user.role || 'user',
+                createdAt: user.createdAt,
+                stats: stats
+            };
         }));
 
         res.json({
             success: true,
-            count: safeUsers.length,
-            users: safeUsers
+            count: usersWithStats.length,
+            users: usersWithStats
         });
     } catch (error) {
         console.error('Get all users error:', error);

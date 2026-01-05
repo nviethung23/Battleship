@@ -335,18 +335,8 @@ async function loadUsers() {
     showLoading();
     try {
         const data = await apiCall('/api/admin/users');
+        // Stats are now included in the response
         allUsers = data.users;
-
-        // Get stats for each user
-        for (let user of allUsers) {
-            try {
-                const userData = await apiCall(`/api/admin/users/${user.id}`);
-                user.stats = userData.stats;
-            } catch (error) {
-                user.stats = { totalGames: 0, wins: 0, losses: 0, winRate: 0 };
-            }
-        }
-
         renderUsersTable(allUsers);
     } catch (error) {
         console.error('Load users error:', error);

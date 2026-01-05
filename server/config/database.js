@@ -103,7 +103,7 @@ class Database {
     // GAME OPERATIONS
     static async getGames() {
         try {
-            const games = await Game.find({}).lean();
+            const games = await Game.find({}).sort({ createdAt: -1 }).lean();
             return games.map(game => ({
                 id: game._id.toString(),
                 roomId: game.roomId,
@@ -114,7 +114,9 @@ class Database {
                 winnerId: game.winnerId,
                 winnerUsername: game.winnerUsername,
                 duration: game.duration,
-                endedAt: game.endedAt
+                startedAt: game.startedAt,
+                endedAt: game.endedAt,
+                createdAt: game.createdAt
             }));
         } catch (error) {
             console.error('Error getting games:', error);
