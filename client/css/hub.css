@@ -1329,6 +1329,92 @@ body {
     }
 }
 
+/* Laptop screens with low height (1366x768 and similar) */
+@media (max-height: 800px) {
+    .hub__container {
+        padding: 0 20px;
+        padding-bottom: 70px; /* Space for copyright */
+    }
+    
+    .hub__main-card {
+        padding: 16px 20px;
+        gap: 16px;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+    
+    .hub__topbar {
+        padding: 0;
+        gap: 10px;
+    }
+    
+    .hub__content-grid {
+        gap: 24px;
+    }
+    
+    .hub__logo {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .hub__title {
+        font-size: 36px;
+    }
+    
+    .hub__subtitle {
+        font-size: 12px;
+    }
+    
+    .hub__character-wrap {
+        width: 180px;
+        height: 220px;
+    }
+    
+    .hub__character-badge {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+    
+    .hub__thumb {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .hub__btn {
+        padding: 12px 16px;
+        gap: 10px;
+    }
+    
+    .hub__btn-text {
+        font-size: 14px;
+    }
+    
+    .hub__btn-desc {
+        font-size: 10px;
+    }
+    
+    .hub__join-panel {
+        padding: 16px;
+    }
+    
+    .hub__join-title {
+        font-size: 16px;
+    }
+    
+    .hub__join-subtitle {
+        font-size: 11px;
+    }
+    
+    .hub__join-input {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+    
+    .hub__join-btn {
+        padding: 10px 16px;
+    }
+}
+
 /* Tablets (1024px) */
 @media (max-width: 1024px) {
     .hub__container {
@@ -1788,8 +1874,8 @@ body::-webkit-scrollbar{
 /* Responsive - Laptop screens (1366x768 and similar) */
 @media (max-height: 800px) {
     .hub__copyright {
-        bottom: 8px;
-        right: 8px;
+        bottom: 10px;
+        right: 10px;
         padding: 6px 10px;
         opacity: 0.5;
     }
@@ -1809,17 +1895,17 @@ body::-webkit-scrollbar{
     }
     
     .hub__social-link svg {
-        width: 14px;
-        height: 14px;
+        width: 12px;
+        height: 12px;
     }
 }
 
-/* Responsive - Small screens */
+/* Responsive - Small width screens */
 @media (max-width: 768px) {
     .hub__copyright {
         bottom: 8px;
         right: 8px;
-        padding: 6px 10px;
+        padding: 5px 8px;
         opacity: 0.5;
     }
     
@@ -1829,7 +1915,7 @@ body::-webkit-scrollbar{
     
     .hub__copyright-team {
         font-size: 8px;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
     }
     
     .hub__social-link {
@@ -1838,8 +1924,8 @@ body::-webkit-scrollbar{
     }
     
     .hub__social-link svg {
-        width: 12px;
-        height: 12px;
+        width: 11px;
+        height: 11px;
     }
 }
 
