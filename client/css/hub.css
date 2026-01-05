@@ -1788,9 +1788,8 @@ body::-webkit-scrollbar{
 /* Responsive - Laptop screens (1366x768 and similar) */
 @media (max-height: 800px) {
     .hub__copyright {
-        bottom: auto;
-        top: 10px;
-        right: 10px;
+        bottom: 8px;
+        right: 8px;
         padding: 6px 10px;
         opacity: 0.5;
     }
@@ -1818,9 +1817,8 @@ body::-webkit-scrollbar{
 /* Responsive - Small screens */
 @media (max-width: 768px) {
     .hub__copyright {
-        bottom: auto;
-        top: 10px;
-        right: 10px;
+        bottom: 8px;
+        right: 8px;
         padding: 6px 10px;
         opacity: 0.5;
     }
