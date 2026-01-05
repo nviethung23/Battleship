@@ -2850,13 +2850,7 @@ function handleBattleGameOver(data) {
     const isWinner = data.winner?.userId === myUserId;
     console.log('[Game] Am I winner?', isWinner, '(winner.userId:', data.winner?.userId, ', myUserId:', myUserId, ')');
     
-    // Show notification
-    SocketShared.showNotification(
-        isWinner ? '🎉 Chúc mừng! Bạn đã thắng!' : '😢 Bạn đã thua!', 
-        isWinner ? 'success' : 'error'
-    );
-    
-    // Update Game Over screen
+    // Update Game Over screen (no notification - screen already shows result)
     updateGameOverScreen(data, isWinner);
 }
 
