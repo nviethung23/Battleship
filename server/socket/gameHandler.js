@@ -1173,12 +1173,16 @@ class GameHandler {
 
         // Notify players
         this.io.to(roomId).emit('game_over', {
-            winner: winner.username,
-            winnerId: winner.userId,
-            winnerCharacterId: normalizeCharacterId(winner.characterId),
-            loser: loser.username,
-            loserId: loser.userId,
-            loserCharacterId: normalizeCharacterId(loser.characterId),
+            winner: {
+                username: winner.username,
+                userId: winner.userId,
+                characterId: normalizeCharacterId(winner.characterId)
+            },
+            loser: {
+                username: loser.username,
+                userId: loser.userId,
+                characterId: normalizeCharacterId(loser.characterId)
+            },
             duration: gameRecord.duration
         });
 
