@@ -692,79 +692,6 @@ body {
     margin: 0;
 }
 
-/* Copyright Badge - Fixed Bottom Right Corner */
-.hub__copyright {
-    position: fixed;
-    bottom: 16px;
-    right: 16px;
-    z-index: 100;
-    padding: 10px 14px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    text-align: center;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    opacity: 0.6;
-    transition: opacity 0.3s ease;
-}
-
-.hub__copyright:hover {
-    opacity: 1;
-}
-
-.hub__copyright-year {
-    font-size: 9px;
-    color: rgba(255, 255, 255, 0.4);
-    margin-bottom: 2px;
-    font-weight: 500;
-}
-
-.hub__copyright-team {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.6);
-    margin-bottom: 8px;
-    font-weight: 400;
-}
-
-.hub__copyright-team strong {
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 600;
-}
-
-.hub__copyright-links {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    align-items: center;
-}
-
-.hub__social-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.5);
-    transition: all 0.3s ease;
-    text-decoration: none;
-}
-
-.hub__social-link:hover {
-    background: rgba(95, 168, 197, 0.15);
-    border-color: rgba(95, 168, 197, 0.3);
-    color: rgba(95, 168, 197, 0.9);
-    transform: translateY(-2px);
-}
-
-.hub__social-link svg {
-    width: 14px;
-    height: 14px;
-}
-
 /* Hub Guide Overlay */
 .hub-guide {
     position: fixed;
@@ -1795,4 +1722,142 @@ body::-webkit-scrollbar{
 .tab-panel.active::-webkit-scrollbar{
   width: 0;
   height: 0;
+}
+
+/* ==================== Copyright Footer ==================== */
+.hub__copyright {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 100;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.hub__copyright:hover {
+    opacity: 1;
+}
+
+.hub__copyright-year {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 2px;
+}
+
+.hub__copyright-team {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 6px;
+}
+
+.hub__copyright-team strong {
+    color: var(--cyan-400);
+}
+
+.hub__copyright-links {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.hub__social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.hub__social-link:hover {
+    color: #fff;
+    background: var(--cyan-500);
+    transform: translateY(-2px);
+}
+
+/* Responsive - Laptop screens (1366x768 and similar) */
+@media (max-height: 800px) {
+    .hub__copyright {
+        bottom: auto;
+        top: 10px;
+        right: 10px;
+        padding: 6px 10px;
+        opacity: 0.5;
+    }
+    
+    .hub__copyright-year {
+        font-size: 10px;
+    }
+    
+    .hub__copyright-team {
+        font-size: 9px;
+        margin-bottom: 4px;
+    }
+    
+    .hub__social-link {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .hub__social-link svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+/* Responsive - Small screens */
+@media (max-width: 768px) {
+    .hub__copyright {
+        bottom: auto;
+        top: 10px;
+        right: 10px;
+        padding: 6px 10px;
+        opacity: 0.5;
+    }
+    
+    .hub__copyright-year {
+        font-size: 9px;
+    }
+    
+    .hub__copyright-team {
+        font-size: 8px;
+        margin-bottom: 4px;
+    }
+    
+    .hub__social-link {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .hub__social-link svg {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hub__copyright {
+        top: 8px;
+        right: 8px;
+        padding: 4px 8px;
+    }
+    
+    .hub__copyright-links {
+        gap: 4px;
+    }
+    
+    .hub__social-link {
+        width: 20px;
+        height: 20px;
+    }
 }
