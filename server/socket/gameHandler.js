@@ -343,6 +343,10 @@ class GameHandler {
             
             console.log(`[LeaveRoom] Player ${leavingPlayer?.username} LEFT during ${targetRoom.status} - ${winner?.username} WINS IMMEDIATELY!`);
             
+            // ✅ CRITICAL: Mark in Redis that this is intentional leave to skip disconnect grace period
+            // When user clicks "Leave Room" button, they forfeit immediately - no reconnecting overlay
+            await socketStateManager.setIntentionalLeave(userId);
+            
             // Stop all timers
             if (targetRoom.deploymentTimerInterval) {
                 clearInterval(targetRoom.deploymentTimerInterval);
@@ -1202,6 +1206,14 @@ class GameHandler {
     async handleDisconnect(socket) {
         console.log(`[Disconnect] Socket ${socket.id} disconnected (userId: ${socket.userId})`);
         
+        // ✅ CRITICAL FIX: Check Redis for intentional leave flag
+        // This prevents double game_over emission and reconnecting overlay for intentional leaves
+        const isIntentional = await socketStateManager.isIntentionalLeave(socket.userId);
+        if (isIntentional) {
+            console.log(`[Disconnect] ✅ Intentional leave detected - skipping disconnect logic for ${socket.userId}`);
+            return false;
+        }
+        
         // Remove from matchmaking queue if present
         this.removeFromQueue(socket.id);
         
@@ -1314,6 +1326,75 @@ class GameHandler {
                     }
                 }
                 
+                // ✅ FIX: User navigated away - START GRACE PERIOD
+                // Don't forfeit immediately, give them time to reconnect
+                const gracePeriodMs = (playerRoom.status === 'deploying' || (game && playerRoom.status === 'playing')) 
+                    ? 10000  // 10s for battle/deployment
+                    : 5000;  // 5s for lobby
+                
+                console.log(`[Disconnect] User navigated away, starting ${gracePeriodMs}ms grace period...`);
+                
+                // ✅ CRITICAL: Check Redis one more time before marking disconnected
+                // New socket might have registered during the Redis check above
+                if (redis) {
+                    try {
+                        const finalCheck = await redis.get(`user:${playerUserId}:connected`);
+                        if (finalCheck === 'true') {
+                            console.log(`[Disconnect] ✅ User reconnected during check - aborting grace period`);
+                            return true;
+                        }
+                        
+                        // ✅ NEW: Check if reconnect happened VERY recently (rapid reconnect)
+                        // This handles race where disconnect event arrives AFTER reconnect completed
+                        const lastReconnectAt = await redis.get(`user:${playerUserId}:lastReconnectAt`);
+                        if (lastReconnectAt) {
+                            const reconnectAge = Date.now() - parseInt(lastReconnectAt);
+                            const RECONNECT_WINDOW_MS = 500; // 500ms window for rapid reconnects
+                            
+                            if (reconnectAge < RECONNECT_WINDOW_MS) {
+                                console.log(`[Disconnect] ✅ Rapid reconnect detected (${reconnectAge}ms ago) - aborting grace period`);
+                                return true;
+                            }
+                        }
+                    } catch (err) {
+                        console.log(`[Disconnect] Redis final check error - aborting grace period`);
+                        return true;
+                    }
+                }
+                
+                // Mark as disconnected in Redis
+                const gracePeriodStarted = await socketStateManager.markDisconnected(playerUserId, socket.id, gracePeriodMs);
+                
+                if (!gracePeriodStarted) {
+                    console.log(`[Disconnect] Grace period not started - already reconnected`);
+                    return true;
+                }
+                
+                // ✅ CRITICAL: Check if player's socketId in room has changed BEFORE setting disconnected flag
+                // This handles race where joinGameRoom() updated socketId during markDisconnected()
+                if (disconnectedPlayer.socketId !== socket.id) {
+                    console.log(`[Disconnect] ⚠️ Player socketId changed (was ${socket.id}, now ${disconnectedPlayer.socketId}) - aborting disconnect`);
+                    // Clear the disconnected state in Redis since we're aborting
+                    await socketStateManager.registerSocket(playerUserId, disconnectedPlayer.socketId, playerRoom.roomId);
+                    return true;
+                }
+                
+                // ✅ Double-check Redis one more time - joinGameRoom may have just registered
+                if (redis) {
+                    const currentSocketId = await redis.get(`user:${playerUserId}:socket`);
+                    if (currentSocketId && currentSocketId !== socket.id) {
+                        console.log(`[Disconnect] ⚠️ Redis socketId changed (was ${socket.id}, now ${currentSocketId}) - aborting disconnect`);
+                        return true;
+                    }
+                }
+                
+                // Mark player as disconnected
+                if (!disconnectedPlayer.disconnected) {
+                    disconnectedPlayer.disconnected = true;
+                    disconnectedPlayer.disconnectTime = Date.now();
+                    console.log(`[Disconnect] ✅ Set disconnected=true for ${disconnectedPlayer.username}`);
+                }
+                
                 // Clear any existing timers
                 if (playerRoom.disconnectTimer) {
                     clearTimeout(playerRoom.disconnectTimer);
@@ -1324,35 +1405,80 @@ class GameHandler {
                     delete playerRoom.battleDisconnectTimer;
                 }
                 
-                // Handle based on game phase
-                if (playerRoom.status === 'deploying' || (game && playerRoom.status === 'playing')) {
-                    // Battle/Deployment phase - opponent wins immediately
-                    console.log(`[Disconnect] User left during ${playerRoom.status}, opponent wins`);
-                    
-                    if (otherPlayer) {
-                        if (game) {
-                            // Battle phase - use endGame
-                            this.endGame(roomId, otherPlayer.userId);
-                        } else {
-                            // Deployment phase - create game record
-                            console.log(`[Disconnect] Creating game record for deployment navigation away`);
-                            await this.createGameAndEndWithWinner(
-                                roomId,
-                                playerRoom,
-                                otherPlayer.userId,
-                                `${disconnectedPlayer.username} left during deployment`
-                            );
-                        }
-                    } else {
-                        // No opponent - just disband
-                        this.disbandRoom(roomId, `${disconnectedPlayer.username} left during ${playerRoom.status}`);
-                    }
-                } else {
-                    // Lobby phase - disband room
-                    this.disbandRoom(roomId, isHost ? 'Host left' : `${disconnectedPlayer.username} left`);
+                // Notify opponent about disconnect with grace period
+                if (otherPlayer && (playerRoom.status === 'deploying' || (game && playerRoom.status === 'playing'))) {
+                    this.io.to(roomId).emit('player:disconnected', {
+                        playerId: playerUserId,
+                        message: `${disconnectedPlayer.username} disconnected`,
+                        gracePeriod: gracePeriodMs / 1000
+                    });
                 }
                 
-                await socketStateManager.clearSession(playerUserId, socket.id);
+                // Start grace period timer
+                const timerKey = (playerRoom.status === 'deploying' || (game && playerRoom.status === 'playing'))
+                    ? 'battleDisconnectTimer'
+                    : 'disconnectTimer';
+                
+                playerRoom[timerKey] = setTimeout(async () => {
+                    console.log(`[Disconnect] Grace period expired for ${playerUserId} after navigation`);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    
+                    const graceStatus = await socketStateManager.checkGracePeriodStatus(playerUserId, gracePeriodMs);
+                    console.log(`[Disconnect] Grace status:`, graceStatus);
+                    
+                    if (graceStatus.hasReconnected || !graceStatus.isStillDisconnected) {
+                        console.log(`[Disconnect] ✅ User reconnected - cancelling forfeit`);
+                        disconnectedPlayer.disconnected = false;
+                        delete disconnectedPlayer.disconnectTime;
+                        delete playerRoom[timerKey];
+                        
+                        this.io.to(roomId).emit('player:reconnected', {
+                            playerId: playerUserId,
+                            message: `${disconnectedPlayer.username} reconnected`
+                        });
+                        return;
+                    }
+                    
+                    if (!graceStatus.gracePeriodExpired) {
+                        console.log(`[Disconnect] ⏰ Grace period not expired`);
+                        return;
+                    }
+                    
+                    const finalSocketStatus = await socketStateManager.checkSocketStatus(playerUserId, socket.id);
+                    if (finalSocketStatus.hasNewSocket) {
+                        console.log(`[Disconnect] ✅ User has new socket - ABORT`);
+                        disconnectedPlayer.disconnected = false;
+                        delete disconnectedPlayer.disconnectTime;
+                        delete playerRoom[timerKey];
+                        return;
+                    }
+                    
+                    console.log(`[Disconnect] ❌ Forfeit confirmed after grace period`);
+                    
+                    // Handle based on game phase
+                    if (playerRoom.status === 'deploying' || (game && playerRoom.status === 'playing')) {
+                        if (otherPlayer) {
+                            if (game) {
+                                this.endGame(roomId, otherPlayer.userId);
+                            } else {
+                                await this.createGameAndEndWithWinner(
+                                    roomId,
+                                    playerRoom,
+                                    otherPlayer.userId,
+                                    `${disconnectedPlayer.username} left during deployment`
+                                );
+                            }
+                        } else {
+                            this.disbandRoom(roomId, `${disconnectedPlayer.username} left during ${playerRoom.status}`);
+                        }
+                    } else {
+                        this.disbandRoom(roomId, isHost ? 'Host left' : `${disconnectedPlayer.username} left`);
+                    }
+                    
+                    await socketStateManager.clearSession(playerUserId, socket.id);
+                }, gracePeriodMs);
+                
                 return true;
             } else {
                 // User reconnected and is back in room - ignore disconnect
@@ -1389,33 +1515,52 @@ class GameHandler {
                 clearTimeout(playerRoom.battleDisconnectTimer);
             }
             
-            // Delay 2s before notifying opponent (skip notification for fast reconnects)
-            setTimeout(async () => {
-                // Check if user reconnected during 2s delay
-                const redis = socketStateManager.getRedisClient();
-                const stillDisconnected = await redis.get(`user:${playerUserId}:connected`);
-                
-                if (stillDisconnected !== 'true') {
-                    // Still disconnected after 2s - notify opponent
-                    if (otherPlayer) {
-                        this.io.to(roomId).emit('player:disconnected', {
-                            playerId: playerUserId,
-                            message: `${disconnectedPlayer.username} disconnected`,
-                            gracePeriod: 10
-                        });
-                    }
-                } else {
-                    console.log(`[Disconnect] ⚡ User reconnected within 2s - skipping notification`);
-                }
-            }, 2000);
+            // Notify opponent
+            if (otherPlayer) {
+                this.io.to(roomId).emit('player:disconnected', {
+                    playerId: playerUserId,
+                    message: `${disconnectedPlayer.username} disconnected`,
+                    gracePeriod: 10
+                });
+            }
             
-            // Start 10s timer (starts immediately, but notification delayed by 2s)
+            // Start 10s timer
             playerRoom.battleDisconnectTimer = setTimeout(async () => {
                 console.log(`[Disconnect] Grace period timer triggered for ${playerUserId}, checking Redis state...`);
                 
                 // ✅ CRITICAL: Wait 50ms for Redis propagation (network + write latency)
                 // Race condition: New socket might connect during old socket disconnect processing
                 await new Promise(resolve => setTimeout(resolve, 50));
+                
+                // ✅ NEW: Check if reconnect happened DURING grace period (rapid reconnect)
+                const redis = socketStateManager.getRedisClient();
+                if (redis) {
+                    try {
+                        const lastReconnectAt = await redis.get(`user:${playerUserId}:lastReconnectAt`);
+                        const disconnectAt = await redis.get(`user:${playerUserId}:disconnectAt`);
+                        
+                        if (lastReconnectAt && disconnectAt) {
+                            const reconnectTime = parseInt(lastReconnectAt);
+                            const disconnectTime = parseInt(disconnectAt);
+                            
+                            // If reconnect happened AFTER disconnect, user is back
+                            if (reconnectTime > disconnectTime) {
+                                console.log(`[Disconnect] ✅ User ${playerUserId} reconnected during grace period (reconnect: ${reconnectTime}, disconnect: ${disconnectTime})`);
+                                disconnectedPlayer.disconnected = false;
+                                delete disconnectedPlayer.disconnectTime;
+                                delete playerRoom.battleDisconnectTimer;
+                                
+                                this.io.to(roomId).emit('player:reconnected', {
+                                    playerId: playerUserId,
+                                    message: `${disconnectedPlayer.username} reconnected`
+                                });
+                                return;
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`[Disconnect] Reconnect timestamp check error:`, err.message);
+                    }
+                }
                 
                 // CRITICAL: Check Redis single source of truth (NOT old socketId)
                 const graceStatus = await socketStateManager.checkGracePeriodStatus(playerUserId, 10000);
@@ -1425,23 +1570,14 @@ class GameHandler {
                 // If user reconnected, cancel timeout
                 if (graceStatus.hasReconnected || !graceStatus.isStillDisconnected) {
                     console.log(`[Disconnect] ✅ User ${playerUserId} RECONNECTED - cancelling timeout`);
-                    
-                    // Calculate disconnect duration BEFORE deleting disconnectTime
-                    const disconnectDuration = Date.now() - (disconnectedPlayer.disconnectTime || Date.now());
-                    
                     disconnectedPlayer.disconnected = false;
                     delete disconnectedPlayer.disconnectTime;
                     delete playerRoom.battleDisconnectTimer;
                     
-                    // Only emit reconnect notification if disconnect lasted > 1s (not page navigation)
-                    if (disconnectDuration > 1000) {
-                        this.io.to(roomId).emit('player:reconnected', {
-                            playerId: playerUserId,
-                            message: `${disconnectedPlayer.username} reconnected`
-                        });
-                    } else {
-                        console.log(`[Disconnect] ⚡ Fast reconnect (${disconnectDuration}ms) - skipping notification (page navigation)`);
-                    }
+                    this.io.to(roomId).emit('player:reconnected', {
+                        playerId: playerUserId,
+                        message: `${disconnectedPlayer.username} reconnected`
+                    });
                     return;
                 }
                 
@@ -2040,6 +2176,7 @@ class GameHandler {
         }
         
         // ✅ CRITICAL FIX: Register socket in Redis FIRST (before join/emit)
+        let wasDisconnected = false;
         if (resolvedUserId) {
             console.log(`[GameHandler] 🔧 Registering socket BEFORE join/emit...`);
             
@@ -2047,20 +2184,35 @@ class GameHandler {
             await socketStateManager.registerSocket(resolvedUserId, socket.id, targetRoomId);
             await socketStateManager.updateRoomStatus(resolvedUserId, targetRoomId, targetRoom.status);
             
-            // 2. Clear any disconnect timers (user reconnected)
+            // 2. Clear any disconnect timers (prevents stale timer callbacks)
+            // Note: Don't set wasDisconnected here - timer existing doesn't mean player was marked disconnected
             if (targetRoom.disconnectTimer) {
-                console.log(`[GameHandler] ✅ Clearing disconnect timer - user reconnected`);
+                console.log(`[GameHandler] ✅ Clearing disconnectTimer - user rejoined`);
                 clearTimeout(targetRoom.disconnectTimer);
                 delete targetRoom.disconnectTimer;
             }
+            if (targetRoom.battleDisconnectTimer) {
+                console.log(`[GameHandler] ✅ Clearing battleDisconnectTimer - user rejoined`);
+                clearTimeout(targetRoom.battleDisconnectTimer);
+                delete targetRoom.battleDisconnectTimer;
+            }
             
             // 3. Update room player data
+            // Only set wasDisconnected if player actually had disconnected=true flag
             if (targetRoom.player1 && targetRoom.player1.userId === resolvedUserId) {
                 targetRoom.player1.socketId = socket.id;
+                if (targetRoom.player1.disconnected === true) {
+                    wasDisconnected = true;
+                    console.log(`[GameHandler] 🔄 Player1 was disconnected, will emit reconnected event`);
+                }
                 targetRoom.player1.disconnected = false;
                 delete targetRoom.player1.disconnectTime;
             } else if (targetRoom.player2 && targetRoom.player2.userId === resolvedUserId) {
                 targetRoom.player2.socketId = socket.id;
+                if (targetRoom.player2.disconnected === true) {
+                    wasDisconnected = true;
+                    console.log(`[GameHandler] 🔄 Player2 was disconnected, will emit reconnected event`);
+                }
                 targetRoom.player2.disconnected = false;
                 delete targetRoom.player2.disconnectTime;
             }
@@ -2073,6 +2225,18 @@ class GameHandler {
         // NOW safe to join room and emit events
         socket.join(targetRoomId);
         console.log(`[GameHandler] ✅ Socket ${socket.id} joined room ${targetRoomId}`);
+        
+        // 4. ✅ CRITICAL: Emit player:reconnected AFTER joining room
+        // This clears the reconnecting overlay on client side
+        if (wasDisconnected) {
+            const reconnectedPlayer = targetRoom.player1?.userId === resolvedUserId ? targetRoom.player1 : targetRoom.player2;
+            console.log(`[GameHandler] 📢 Emitting player:reconnected for ${reconnectedPlayer?.username} to room ${targetRoomId}`);
+            this.io.to(targetRoomId).emit('player:reconnected', {
+                playerId: resolvedUserId,
+                username: reconnectedPlayer?.username,
+                message: `${reconnectedPlayer?.username} reconnected`
+            });
+        }
         
         // Send actual roomId back to client for chat/webrtc
         socket.emit('room:actualRoomId', {
@@ -2349,7 +2513,7 @@ class GameHandler {
 
     // Create minimal game record and end with winner (for deployment disconnect)
     createGameAndEndWithWinner(roomId, room, winnerId, reason = 'disconnect') {
-        console.log(`[GameHandler] Creating game record for ${reason} win in room ${roomId}`);
+        console.log(`[GameHandler] Creating game record for ${reason} win in room ${roomId}, room status: ${room.status}`);
         
         const winner = room.player1.userId === winnerId ? room.player1 : room.player2;
         const loser = room.player1.userId === winnerId ? room.player2 : room.player1;
@@ -2391,21 +2555,33 @@ class GameHandler {
             return 'character1';
         };
 
-        // Emit game_over event
-        this.io.to(roomId).emit('game_over', {
-            winner: {
-                userId: winner.userId,
-                username: winner.username,
-                characterId: normalizeCharacterId(winner.characterId)
-            },
-            loser: {
-                userId: loser.userId,
-                username: loser.username,
-                characterId: normalizeCharacterId(loser.characterId)
-            },
-            reason: reason,
-            message: `${winner.username} thắng do ${loser.username} mất kết nối!`
-        });
+        // ✅ CRITICAL FIX: Only emit game_over if game actually started (deployment or playing)
+        // Lobby disconnects should NOT show game over screen
+        const gamePhases = ['deploying', 'playing'];
+        if (gamePhases.includes(room.status)) {
+            console.log(`[GameHandler] ✅ Emitting game_over for ${room.status} phase`);
+            
+            // Emit game_over event
+            this.io.to(roomId).emit('game_over', {
+                winner: {
+                    userId: winner.userId,
+                    username: winner.username,
+                    characterId: normalizeCharacterId(winner.characterId)
+                },
+                loser: {
+                    userId: loser.userId,
+                    username: loser.username,
+                    characterId: normalizeCharacterId(loser.characterId)
+                },
+                reason: reason,
+                message: `${winner.username} thắng do ${loser.username} mất kết nối!`
+            });
+        } else {
+            console.log(`[GameHandler] ⚠️ Room status '${room.status}' - NOT emitting game_over (lobby phase)`);
+            // For lobby phase, just disband without game_over screen
+            this.disbandRoom(roomId, `${loser.username} left before game started`);
+            return; // Early return to skip cleanup below
+        }
 
         // Clean up room AFTER a short delay to ensure client receives game_over event
         setTimeout(() => {

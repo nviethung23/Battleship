@@ -413,11 +413,15 @@ function renderGhostPreview(row, col, isValid) {
         ghostContainer.style.zIndex = '100';
         ghostContainer.dataset.key = ghostKey;
 
-        // Create ONE ship image (not segments)
+        // Create ship image
         const imgPath = `images/characters/${shipDockState.characterFolder}/ships/${SHIP_IMAGE_MAP[shipName]}`;
         const img = document.createElement('img');
         img.src = imgPath;
         img.className = 'ghost-ship-image';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'fill'; // ✅ CRITICAL: 'fill' stretches to exact container size (not 'contain')
+        img.style.objectPosition = 'center';
         img.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
         
         ghostContainer.appendChild(img);
@@ -433,38 +437,62 @@ function renderGhostPreview(row, col, isValid) {
     const x = col * cellSize;
     const y = row * cellSize;
     
-    // Get actual image dimensions for this ship
-    const imgDimensions = SHIP_IMAGE_DIMENSIONS[shipName] || { width: 50, height: 200 };
-    
-    // Calculate container size based on orientation
-    // HORIZONTAL: Container = shipSize cells wide × 1 cell tall
-    // VERTICAL: Container = 1 cell wide × shipSize cells tall
-    // BUT when image rotates 90deg, its width/height swap!
+    // ✅ FIX: Container and image sizing for proper rotation
+    // Ship images are VERTICAL by default (50px wide × 200-250px tall)
+    // For HORIZONTAL placement, we need to rotate AND adjust container
     
     let containerWidth, containerHeight;
+    let imageTransform = '';
+    
     if (isHorizontal) {
-        // Horizontal ship: stretched across multiple cells
+        // Horizontal placement: shipSize cells wide, 1 cell tall
+        // BUT image is rotated 90deg, so we need special handling
+        
+        // Container matches grid: shipSize × 1 cells
         containerWidth = shipSize * cellSize;
         containerHeight = cellSize;
+        
+        // Image transform: rotate 90deg around center
+        // When rotated, the image's width becomes height and height becomes width
+        imageTransform = 'rotate(90deg)';
+        
     } else {
-        // Vertical ship: stretched down multiple cells
-        // Image will rotate 90deg, so we need to account for aspect ratio
+        // Vertical placement: 1 cell wide, shipSize cells tall (natural orientation)
         containerWidth = cellSize;
         containerHeight = shipSize * cellSize;
+        imageTransform = 'none';
     }
 
-    // Position and size the ghost container to match grid cells
+    // Position and size the ghost container to match grid cells EXACTLY
     ghostContainer.style.left = `${x}px`;
     ghostContainer.style.top = `${y}px`;
     ghostContainer.style.width = `${containerWidth}px`;
     ghostContainer.style.height = `${containerHeight}px`;
     ghostContainer.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    // CRITICAL: For rotation to work properly with fill
+    ghostContainer.style.display = 'flex';
+    ghostContainer.style.alignItems = 'center';
+    ghostContainer.style.justifyContent = 'center';
+    ghostContainer.style.overflow = 'hidden';
 
-    // Rotate image for vertical orientation
+    // Apply transform and styling to image
     const img = ghostContainer.querySelector('.ghost-ship-image');
     if (img) {
-        // When vertical, rotate 90deg - the image will fit inside rotated space
-        img.style.transform = isHorizontal ? 'rotate(0deg)' : 'rotate(90deg)';
+        img.style.transform = imageTransform;
+        
+        // For horizontal, image needs to fill the rotated space
+        if (isHorizontal) {
+            // Image will be rotated 90deg, so its original height becomes width
+            // We want it to stretch across all cells
+            img.style.width = `${containerHeight}px`; // Use container height (1 cell)
+            img.style.height = `${containerWidth}px`; // Use container width (shipSize cells)
+        } else {
+            // Vertical: normal sizing
+            img.style.width = '100%';
+            img.style.height = '100%';
+        }
+        
         img.style.opacity = isValid ? '0.8' : '0.5';
         img.style.filter = isValid 
             ? 'brightness(1.3) saturate(1.5) drop-shadow(0 0 10px rgba(40, 200, 80, 0.8))'

@@ -43,6 +43,10 @@ class SocketStateManager {
                 // CRITICAL: Clear disconnect timestamp (user has reconnected)
                 await redis.del(`user:${userId}:disconnectAt`);
                 
+                // ✅ NEW: Store reconnect timestamp for rapid reconnect detection
+                await redis.set(`user:${userId}:lastReconnectAt`, timestamp.toString());
+                await redis.expire(`user:${userId}:lastReconnectAt`, 60); // 1 min TTL
+                
                 // Store session data with 5 minute TTL
                 await redis.setEx(
                     `session:${userId}`, 
@@ -445,6 +449,61 @@ class SocketStateManager {
      */
     getRedisClient() {
         return getRedisClient();
+    }
+
+    /**
+     * Mark user as intentionally leaving (clicked "Leave Room" button)
+     * This prevents disconnect grace period from triggering
+     * @param {string} userId 
+     * @returns {Promise<boolean>}
+     */
+    async setIntentionalLeave(userId) {
+        if (isRedisReady()) {
+            try {
+                const redis = getRedisClient();
+                // Set flag with 30 second TTL (enough time for disconnect event to fire)
+                await redis.setEx(`user:${userId}:intentionalLeave`, 30, 'true');
+                console.log(`[SocketState] Marked ${userId} as intentional leave`);
+                return true;
+            } catch (err) {
+                console.error('[SocketState] Redis error:', err.message);
+            }
+        }
+        
+        // Fallback to memory
+        this.memoryStore.sessions.set(`${userId}:intentionalLeave`, { timestamp: Date.now() });
+        return true;
+    }
+
+    /**
+     * Check if user is intentionally leaving
+     * @param {string} userId 
+     * @returns {Promise<boolean>}
+     */
+    async isIntentionalLeave(userId) {
+        if (isRedisReady()) {
+            try {
+                const redis = getRedisClient();
+                const flag = await redis.get(`user:${userId}:intentionalLeave`);
+                if (flag === 'true') {
+                    // Clear flag after checking
+                    await redis.del(`user:${userId}:intentionalLeave`);
+                    console.log(`[SocketState] Found and cleared intentional leave flag for ${userId}`);
+                    return true;
+                }
+                return false;
+            } catch (err) {
+                console.error('[SocketState] Redis error:', err.message);
+            }
+        }
+        
+        // Fallback to memory
+        const flag = this.memoryStore.sessions.get(`${userId}:intentionalLeave`);
+        if (flag) {
+            this.memoryStore.sessions.delete(`${userId}:intentionalLeave`);
+            return true;
+        }
+        return false;
     }
 }
 

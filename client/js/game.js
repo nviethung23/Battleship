@@ -2143,55 +2143,45 @@ function handlePlayerDisconnected(data) {
 
 // ============ RECONNECTING OVERLAY ============
 let reconnectCountdownInterval = null;
-let reconnectOverlayTimeout = null;
 
 function showReconnectingOverlay(username, gracePeriod) {
-    // Remove existing overlay and pending timeout
+    // Remove existing overlay
     hideReconnectingOverlay();
     
-    // Delay 500ms before showing overlay (prevents flash on page navigation)
-    reconnectOverlayTimeout = setTimeout(() => {
-        const overlay = document.createElement('div');
-        overlay.id = 'reconnectingOverlay';
-        overlay.className = 'reconnecting-overlay';
-        overlay.innerHTML = `
-            <div class="reconnecting-content">
-                <div class="reconnecting-spinner"></div>
-                <div class="reconnecting-title">⚡ ĐANG KẾT NỐI LẠI</div>
-                <div class="reconnecting-player">${username}</div>
-                <div class="reconnecting-countdown">
-                    <span id="reconnectTimer">${gracePeriod}</span>s
-                </div>
-                <div class="reconnecting-message">Đợi đối thủ kết nối lại...</div>
+    const overlay = document.createElement('div');
+    overlay.id = 'reconnectingOverlay';
+    overlay.className = 'reconnecting-overlay';
+    overlay.innerHTML = `
+        <div class="reconnecting-content">
+            <div class="reconnecting-spinner"></div>
+            <div class="reconnecting-title">⚡ ĐANG KẾT NỐI LẠI</div>
+            <div class="reconnecting-player">${username}</div>
+            <div class="reconnecting-countdown">
+                <span id="reconnectTimer">${gracePeriod}</span>s
             </div>
-        `;
+            <div class="reconnecting-message">Đợi đối thủ kết nối lại...</div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Start countdown
+    let timeLeft = gracePeriod;
+    reconnectCountdownInterval = setInterval(() => {
+        timeLeft--;
+        const timerEl = document.getElementById('reconnectTimer');
+        if (timerEl) {
+            timerEl.textContent = timeLeft;
+        }
         
-        document.body.appendChild(overlay);
-        
-        // Start countdown
-        let timeLeft = gracePeriod;
-        reconnectCountdownInterval = setInterval(() => {
-            timeLeft--;
-            const timerEl = document.getElementById('reconnectTimer');
-            if (timerEl) {
-                timerEl.textContent = timeLeft;
-            }
-            
-            if (timeLeft <= 0) {
-                clearInterval(reconnectCountdownInterval);
-                reconnectCountdownInterval = null;
-            }
-        }, 1000);
-    }, 500); // Delay 500ms before showing overlay
+        if (timeLeft <= 0) {
+            clearInterval(reconnectCountdownInterval);
+            reconnectCountdownInterval = null;
+        }
+    }, 1000);
 }
 
 function hideReconnectingOverlay() {
-    // Cancel pending overlay timeout
-    if (reconnectOverlayTimeout) {
-        clearTimeout(reconnectOverlayTimeout);
-        reconnectOverlayTimeout = null;
-    }
-    
     const overlay = document.getElementById('reconnectingOverlay');
     if (overlay) {
         overlay.remove();

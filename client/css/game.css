@@ -1572,7 +1572,7 @@ kbd {
     pointer-events: none;
     z-index: 100;
     border-radius: 8px;
-    overflow: visible;
+    overflow: hidden; /* ✅ Changed to hidden to clip rotated image properly */
     background: rgba(100, 149, 237, 0.25);
     border: 3px solid rgba(100, 149, 237, 0.6);
     box-shadow: 
@@ -1581,17 +1581,19 @@ kbd {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Ship image inside ghost */
 .ghost-ship-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    object-fit: fill; /* ✅ Fill to match exact container dimensions */
     object-position: center;
     opacity: 0.7;
     transition: all 0.2s ease;
     filter: brightness(1.2) saturate(1.3);
+    transform-origin: center center; /* ✅ Rotate around center */
 }
 
 /* Valid placement - green glow */
