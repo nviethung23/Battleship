@@ -312,6 +312,7 @@ class GameHandler {
     // Leave room handler
     async leaveRoom(socket, data) {
         const { userId } = data;
+        console.log(`[LeaveRoom] 🚪 Received leave_room from socket ${socket.id}, userId: ${userId}`);
         
         // Find room user is in
         let targetRoomId = null;

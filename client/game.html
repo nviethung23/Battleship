@@ -388,7 +388,7 @@
             <!-- Settings Button -->
             <button class="btn-settings" id="btnSettings" title="Settings">⚙️</button>
             <div class="settings-menu" id="settingsMenu" aria-hidden="true">
-                <button id="exitToHubBtn" class="settings-item">Thoát game</button>
+                <button id="exitToHubBtn" class="settings-item" onclick="backToHub()">Thoát game</button>
             </div>
 
         </div><!-- end battleScreen -->
@@ -400,7 +400,7 @@
     <script src="js/shipDock.js"></script>
     <script src="js/shared/state.js"></script>
     <script src="js/shared/socket-shared.js"></script>
-    <script src="js/game.js"></script>
+    <script src="js/game.js?v=2.5"></script>
     <!-- ui.js removed - logic consolidated into game.js -->
     <!-- socket.js is deprecated - using socket-shared.js instead -->
     <script src="js/chat.js"></script>

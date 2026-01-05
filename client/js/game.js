@@ -203,9 +203,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (exitBtn) {
-        exitBtn.addEventListener('click', () => {
+        console.log('[Game] ✅ Exit button found, adding click handler');
+        exitBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('[Game] 🚪 Exit button clicked!');
             backToHub();
         });
+    } else {
+        console.log('[Game] ⚠️ Exit button NOT found!');
     }
 });
 
@@ -649,6 +654,37 @@ function createEmptyBoard() {
 }
 
 function backToHub() {
+    // ✅ CRITICAL: Emit leave_room event BEFORE redirecting
+    // This ensures opponent wins immediately instead of waiting for grace period
+    const userId = BattleshipState.getUserId();
+    const roomCode = BattleshipState.getRoomCode();
+    const socket = SocketShared.getSocket();
+    
+    console.log('[Game] 🚪 backToHub called', { userId, roomCode, hasSocket: !!socket, connected: socket?.connected });
+    
+    // Always try to emit leave_room if we have socket and userId
+    if (socket && userId) {
+        console.log('[Game] 🚪 Emitting leave_room before redirect...', { userId, roomCode });
+        try {
+            // Use volatile to not wait for acknowledgment
+            socket.volatile.emit('leave_room', { userId, roomCode });
+        } catch (e) {
+            console.error('[Game] Error emitting leave_room:', e);
+        }
+    } else {
+        console.log('[Game] ⚠️ Cannot emit leave_room:', { 
+            hasSocket: !!socket, 
+            userId 
+        });
+    }
+    
+    // Small delay to ensure emit is sent before page unload
+    setTimeout(() => {
+        doBackToHubCleanup();
+    }, 200);
+}
+
+function doBackToHubCleanup() {
     // Clear battle state (for reconnection)
     clearBattleState();
     
